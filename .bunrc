@@ -1,0 +1,10 @@
+# Bun configuration for Open WebUI
+# This file configures Bun package manager settings
+
+[install]
+# Use frozen lockfile for reproducible installs
+frozen-lockfile = true
+
+[run]
+# Enable shell completions
+shell = "bash"
