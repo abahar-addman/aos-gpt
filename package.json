@@ -3,10 +3,9 @@
 	"version": "0.8.3",
 	"private": true,
 	"scripts": {
-		"dev": "bun run pyodide:fetch && vite dev --host",
-		"dev:frontend": "bun run dev",
-		"dev:backend": "cd backend && python -m uvicorn open_webui.main:app --reload --host 0.0.0.0 --port 8080",
-		"dev:full": "concurrently \"bun run dev:backend\" \"bun run dev:frontend\"",
+		"dev": "concurrently \"bun run dev:backend\" \"bun run dev:frontend\"",
+		"dev:frontend": "bun run pyodide:fetch && vite dev --host",
+		"dev:backend": "cd backend && venv/Scripts/python -m uvicorn open_webui.main:app --reload --host 0.0.0.0 --port 8080",
 		"dev:5050": "bun run pyodide:fetch && vite dev --port 5050",
 		"build": "bun run pyodide:fetch && vite build",
 		"build:watch": "bun run pyodide:fetch && vite build --watch",

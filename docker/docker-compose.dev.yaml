@@ -1,13 +1,4 @@
 services:
-  ollama:
-    volumes:
-      - ollama:/root/.ollama
-    container_name: ollama
-    pull_policy: always
-    tty: true
-    restart: unless-stopped
-    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
-
   open-webui:
     build:
       context: .
@@ -16,24 +7,24 @@ services:
     container_name: open-webui-dev
     volumes:
       - open-webui:/app/backend/data
-      # Mount source code for live changes
       - ./backend:/app/backend
       - ./src:/app/src
       - ./static:/app/static
-    depends_on:
-      - ollama
     ports:
       - ${OPEN_WEBUI_PORT-3000}:8080
     environment:
-      - 'OLLAMA_BASE_URL=http://ollama:11434'
-      - 'WEBUI_SECRET_KEY='
-      - 'ENV=dev'
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL-http://host.docker.internal:11434}
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY-}
+      - ENV=dev
+      - CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN-*}
+      - FORWARDED_ALLOW_IPS=${FORWARDED_ALLOW_IPS-*}
+      - SCARF_NO_ANALYTICS=${SCARF_NO_ANALYTICS-true}
+      - DO_NOT_TRACK=${DO_NOT_TRACK-true}
+      - ANONYMIZED_TELEMETRY=${ANONYMIZED_TELEMETRY-false}
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
-    # Override command to enable hot reload
     command: bash -c "cd /app/backend && uvicorn open_webui.main:app --reload --host 0.0.0.0 --port 8080"
 
 volumes:
-  ollama: {}
   open-webui: {}
