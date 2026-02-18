@@ -10,6 +10,5 @@ class VectorType(StrEnum):
     OPENSEARCH = "opensearch"
     PGVECTOR = "pgvector"
     ORACLE23AI = "oracle23ai"
-    S3VECTOR = "s3vector"
     WEAVIATE = "weaviate"
     OPENGAUSS = "opengauss"

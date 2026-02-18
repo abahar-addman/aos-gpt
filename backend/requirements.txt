@@ -109,7 +109,6 @@ google-auth-httplib2
 google-auth-oauthlib
 
 googleapis-common-protos==1.72.0
-google-cloud-storage==3.9.0
 
 ## Databases
 pymongo
@@ -117,7 +116,6 @@ psycopg2-binary==2.9.11
 pgvector==0.4.2
 
 PyMySQL==1.1.2
-boto3==1.42.44
 
 pymilvus==2.6.8
 qdrant-client==1.16.2
