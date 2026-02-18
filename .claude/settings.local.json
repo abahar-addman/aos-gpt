@@ -3,7 +3,9 @@
     "allow": [
       "Bash(ls:*)",
       "WebSearch",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(python -c:*)",
+      "Bash(python:*)"
     ]
   }
 }

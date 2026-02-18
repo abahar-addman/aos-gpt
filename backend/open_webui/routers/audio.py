@@ -49,6 +49,14 @@ from open_webui.config import (
 )
 
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.utils.cache import (
+    redis_cache_get,
+    redis_cache_set,
+    redis_cache_set_json,
+    redis_cache_get_json_sync,
+    redis_cache_set_json_sync,
+)
+from open_webui.utils.redis import get_redis_client
 from open_webui.env import (
     ENV,
     AIOHTTP_CLIENT_SESSION_SSL,
@@ -70,6 +78,9 @@ log = logging.getLogger(__name__)
 
 SPEECH_CACHE_DIR = CACHE_DIR / "audio" / "speech"
 SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+# Sync Redis client for use in sync transcription handler
+_sync_redis = get_redis_client(async_mode=False)
 
 
 ##########################################
@@ -356,8 +367,18 @@ async def speech(request: Request, user=Depends(get_verified_user)):
     file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
     file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
 
-    # Check if the file already exists in the cache
+    redis = getattr(request.app.state, "redis", None)
+    redis_speech_key = f"audio:speech:{name}"
+
+    # Check if the file already exists in the cache (disk first, then Redis)
     if file_path.is_file():
+        return FileResponse(file_path)
+
+    # Check Redis on disk miss
+    cached_audio = await redis_cache_get(redis, redis_speech_key)
+    if cached_audio is not None:
+        async with aiofiles.open(file_path, "wb") as f:
+            await f.write(cached_audio)
         return FileResponse(file_path)
 
     payload = None
@@ -397,11 +418,14 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
                 r.raise_for_status()
 
+                audio_data = await r.read()
                 async with aiofiles.open(file_path, "wb") as f:
-                    await f.write(await r.read())
+                    await f.write(audio_data)
 
                 async with aiofiles.open(file_body_path, "w") as f:
                     await f.write(json.dumps(payload))
+
+                await redis_cache_set(redis, redis_speech_key, audio_data, ttl=86400)
 
             return FileResponse(file_path)
 
@@ -457,11 +481,14 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 ) as r:
                     r.raise_for_status()
 
+                    audio_data = await r.read()
                     async with aiofiles.open(file_path, "wb") as f:
-                        await f.write(await r.read())
+                        await f.write(audio_data)
 
                     async with aiofiles.open(file_body_path, "w") as f:
                         await f.write(json.dumps(payload))
+
+                    await redis_cache_set(redis, redis_speech_key, audio_data, ttl=86400)
 
             return FileResponse(file_path)
 
@@ -516,11 +543,14 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 ) as r:
                     r.raise_for_status()
 
+                    audio_data = await r.read()
                     async with aiofiles.open(file_path, "wb") as f:
-                        await f.write(await r.read())
+                        await f.write(audio_data)
 
                     async with aiofiles.open(file_body_path, "w") as f:
                         await f.write(json.dumps(payload))
+
+                    await redis_cache_set(redis, redis_speech_key, audio_data, ttl=86400)
 
                     return FileResponse(file_path)
 
@@ -578,6 +608,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         async with aiofiles.open(file_body_path, "w") as f:
             await f.write(json.dumps(payload))
 
+        async with aiofiles.open(file_path, "rb") as f:
+            audio_data = await f.read()
+        await redis_cache_set(redis, redis_speech_key, audio_data, ttl=86400)
+
         return FileResponse(file_path)
 
 
@@ -620,6 +654,8 @@ def transcription_handler(request, file_path, metadata, user=None):
         with open(transcript_file, "w") as f:
             json.dump(data, f)
 
+        redis_cache_set_json_sync(_sync_redis, f"audio:transcription:{id}", data, ttl=3600)
+
         log.debug(data)
         return data
     elif request.app.state.config.STT_ENGINE == "openai":
@@ -659,6 +695,8 @@ def transcription_handler(request, file_path, metadata, user=None):
             transcript_file = f"{file_dir}/{id}.json"
             with open(transcript_file, "w") as f:
                 json.dump(data, f)
+
+            redis_cache_set_json_sync(_sync_redis, f"audio:transcription:{id}", data, ttl=3600)
 
             return data
         except Exception as e:
@@ -732,6 +770,8 @@ def transcription_handler(request, file_path, metadata, user=None):
             transcript_file = f"{file_dir}/{id}.json"
             with open(transcript_file, "w") as f:
                 json.dump(data, f)
+
+            redis_cache_set_json_sync(_sync_redis, f"audio:transcription:{id}", data, ttl=3600)
 
             return data
 
@@ -839,6 +879,8 @@ def transcription_handler(request, file_path, metadata, user=None):
             transcript_file = f"{file_dir}/{id}.json"
             with open(transcript_file, "w") as f:
                 json.dump(data, f)
+
+            redis_cache_set_json_sync(_sync_redis, f"audio:transcription:{id}", data, ttl=3600)
 
             log.debug(data)
             return data
@@ -1019,6 +1061,8 @@ def transcription_handler(request, file_path, metadata, user=None):
             transcript_file = f"{file_dir}/{id}.json"
             with open(transcript_file, "w") as f:
                 json.dump(data, f)
+
+            redis_cache_set_json_sync(_sync_redis, f"audio:transcription:{id}", data, ttl=3600)
 
             log.debug(data)
             return data

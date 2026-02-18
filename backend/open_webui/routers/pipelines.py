@@ -25,6 +25,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.routers.openai import get_all_models_responses
 
 from open_webui.utils.auth import get_admin_user
+from open_webui.storage.provider import get_pipeline_storage_provider
 
 log = logging.getLogger(__name__)
 
@@ -218,9 +219,18 @@ async def upload_pipeline(
 
     response = None
     try:
-        # Save the uploaded file
+        # Save the uploaded file locally (temp)
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
+
+        # Upload to Azure Blob Storage (pipeline container)
+        try:
+            pipeline_storage = get_pipeline_storage_provider()
+            with open(file_path, "rb") as f:
+                pipeline_storage.upload_file(f, filename, {})
+            log.info(f"Pipeline file '{filename}' uploaded to Azure Blob Storage")
+        except Exception as e:
+            log.warning(f"Failed to upload pipeline to Azure Blob Storage: {e}")
 
         url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
         key = request.app.state.config.OPENAI_API_KEYS[urlIdx]

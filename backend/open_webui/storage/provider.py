@@ -8,6 +8,7 @@ from open_webui.config import (
     AZURE_STORAGE_ENDPOINT,
     AZURE_STORAGE_CONTAINER_NAME,
     AZURE_STORAGE_KEY,
+    AZURE_PIPELINE_CONTAINER_NAME,
     STORAGE_PROVIDER,
     UPLOAD_DIR,
 )
@@ -85,9 +86,9 @@ class LocalStorageProvider(StorageProvider):
 
 
 class AzureStorageProvider(StorageProvider):
-    def __init__(self):
+    def __init__(self, container_name: str = None):
         self.endpoint = AZURE_STORAGE_ENDPOINT
-        self.container_name = AZURE_STORAGE_CONTAINER_NAME
+        self.container_name = container_name or AZURE_STORAGE_CONTAINER_NAME
         storage_key = AZURE_STORAGE_KEY
 
         if storage_key:
@@ -165,3 +166,8 @@ def get_storage_provider(storage_provider: str):
 
 
 Storage = get_storage_provider(STORAGE_PROVIDER)
+
+
+def get_pipeline_storage_provider():
+    """Returns an AzureStorageProvider configured for the pipeline container."""
+    return AzureStorageProvider(container_name=AZURE_PIPELINE_CONTAINER_NAME)
