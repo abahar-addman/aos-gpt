@@ -19,6 +19,7 @@ from authlib.integrations.starlette_client import OAuth
 
 
 from open_webui.env import (
+    BASE_DIR,
     DATA_DIR,
     DATABASE_URL,
     ENABLE_DB_MIGRATIONS,
@@ -875,6 +876,19 @@ if frontend_loader.exists():
         shutil.copyfile(frontend_loader, STATIC_DIR / "loader.js")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
+
+# Fallback: copy from source static/ dir (for dev mode when build/ doesn't exist)
+_SOURCE_STATIC_DIR = (BASE_DIR / "static").resolve()
+if _SOURCE_STATIC_DIR.exists() and _SOURCE_STATIC_DIR != STATIC_DIR:
+    for file_path in _SOURCE_STATIC_DIR.glob("**/*"):
+        if file_path.is_file():
+            target_path = STATIC_DIR / file_path.relative_to(_SOURCE_STATIC_DIR)
+            if not target_path.exists():  # don't overwrite build assets
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    shutil.copyfile(file_path, target_path)
+                except Exception as e:
+                    logging.error(f"An error occurred: {e}")
 
 
 ####################################
