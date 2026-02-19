@@ -1,6 +1,5 @@
 import i18next from 'i18next';
 import resourcesToBackend from 'i18next-resources-to-backend';
-import LanguageDetector from 'i18next-browser-languagedetector';
 import type { i18n as i18nType } from 'i18next';
 import { writable } from 'svelte/store';
 
@@ -37,30 +36,16 @@ const createIsLoadingStore = (i18n: i18nType) => {
 	return isLoading;
 };
 
-export const initI18n = (defaultLocale?: string | undefined) => {
-	const detectionOrder = defaultLocale
-		? ['querystring', 'localStorage']
-		: ['querystring', 'localStorage', 'navigator'];
-	const fallbackDefaultLocale = defaultLocale ? [defaultLocale] : ['en-US'];
-
+export const initI18n = () => {
 	const loadResource = (language: string, namespace: string) =>
 		import(`./locales/${language}/${namespace}.json`);
 
 	i18next
 		.use(resourcesToBackend(loadResource))
-		.use(LanguageDetector)
 		.init({
 			debug: false,
-			detection: {
-				order: detectionOrder,
-				caches: ['localStorage'],
-				lookupQuerystring: 'lang',
-				lookupLocalStorage: 'locale'
-			},
-			fallbackLng: {
-				fr: ['fr-FR'],
-				default: fallbackDefaultLocale
-			},
+			lng: 'en-US',
+			fallbackLng: 'en-US',
 			ns: 'translation',
 			returnEmptyString: false,
 			interpolation: {
@@ -68,8 +53,7 @@ export const initI18n = (defaultLocale?: string | undefined) => {
 			}
 		});
 
-	const lang = i18next?.language || defaultLocale || 'en-US';
-	document.documentElement.setAttribute('lang', lang);
+	document.documentElement.setAttribute('lang', 'en-US');
 };
 
 const i18n = createI18nStore(i18next);

@@ -49,6 +49,9 @@ const config = {
 	onwarn: (warning, handler) => {
 		const { code } = warning;
 		if (code === 'css-unused-selector') return;
+		if (code === 'a11y_consider_explicit_label') return;
+		if (code === 'element_invalid_self_closing_tag') return;
+		if (code === 'export_let_unused') return;
 
 		handler(warning);
 	}

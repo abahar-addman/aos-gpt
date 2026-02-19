@@ -29,7 +29,7 @@
 
 	export let id = null;
 	export let channel = null;
-	export let messages = [];
+	export let messages: any[] = [];
 	export let replyToMessage = null;
 	export let top = false;
 	export let thread = false;

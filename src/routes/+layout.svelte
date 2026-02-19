@@ -37,7 +37,7 @@
 	import { beforeNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
 
-	import i18n, { initI18n, getLanguages, changeLanguage } from '$lib/i18n';
+	import i18n, { initI18n } from '$lib/i18n';
 
 	import '../tailwind.css';
 	import '../app.css';
@@ -49,7 +49,6 @@
 	import { chatCompletion } from '$lib/apis/openai';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
-	import { bestMatchingLanguage } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
@@ -57,7 +56,6 @@
 	import SyncStatsModal from '$lib/components/chat/Settings/SyncStatsModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { getUserSettings } from '$lib/apis/users';
-	import dayjs from 'dayjs';
 	import { getChannels } from '$lib/apis/channels';
 
 	const unregisterServiceWorkers = async () => {
@@ -764,18 +762,7 @@
 		// Initialize i18n even if we didn't get a backend config,
 		// so `/error` can show something that's not `undefined`.
 
-		initI18n(localStorage?.locale);
-		if (!localStorage.locale) {
-			const languages = await getLanguages();
-			const browserLanguages = navigator.languages
-				? navigator.languages
-				: [navigator.language || navigator.userLanguage];
-			const lang = backendConfig.default_locale
-				? backendConfig.default_locale
-				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
-			changeLanguage(lang);
-			dayjs.locale(lang);
-		}
+		initI18n();
 
 		if (backendConfig) {
 			// Save Backend Status to Store

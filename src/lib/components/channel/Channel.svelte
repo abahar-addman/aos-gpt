@@ -27,22 +27,22 @@
 
 	export let id = '';
 
-	let currentId = null;
+	let currentId: string | null = null;
 
 	let scrollEnd = true;
-	let messagesContainerElement = null;
-	let chatInputElement = null;
+	let messagesContainerElement: HTMLElement | null = null;
+	let chatInputElement: HTMLElement | null = null;
 
 	let top = false;
 
-	let channel = null;
-	let messages = null;
+	let channel: any | null = null;
+	let messages: any[] | null = null;
 
-	let replyToMessage = null;
-	let threadId = null;
+	let replyToMessage: any = null;
+	let threadId: any = null;
 
-	let typingUsers = [];
-	let typingUsersTimeout = {};
+	let typingUsers: any[] = [];
+	let typingUsersTimeout: { [key: string]: any } = {};
 
 	$: if (id) {
 		initHandler();
@@ -64,7 +64,7 @@
 		});
 
 		channels.set(
-			$channels.map((channel) => {
+			$channels.map((channel: any) => {
 				if (channel.id === channelId) {
 					return {
 						...channel,
@@ -122,7 +122,7 @@
 					const tempId = data?.temp_id ?? null;
 					messages = [
 						{ ...data, temp_id: null },
-						...messages.filter((m) => !tempId || m?.temp_id !== tempId)
+						...(messages?.filter((m) => !tempId || m?.temp_id !== tempId) ?? [])
 					];
 
 					if (typingUsers.find((user) => user.id === event.user.id)) {
@@ -135,22 +135,22 @@
 					}
 				}
 			} else if (type === 'message:update') {
-				const idx = messages.findIndex((message) => message.id === data.id);
+				let idx: any = messages?.findIndex((message) => message.id === data.id);
 
-				if (idx !== -1) {
+				if (idx !== -1 && messages) {
 					messages[idx] = data;
 				}
 			} else if (type === 'message:delete') {
-				messages = messages.filter((message) => message.id !== data.id);
+				messages = messages?.filter((message) => message.id !== data.id) ?? null;
 			} else if (type === 'message:reply') {
-				const idx = messages.findIndex((message) => message.id === data.id);
+				const idx = messages?.findIndex((message) => message.id === data.id);
 
-				if (idx !== -1) {
+				if (idx !== undefined && idx !== -1 && messages) {
 					messages[idx] = data;
 				}
 			} else if (type.includes('message:reaction')) {
-				const idx = messages.findIndex((message) => message.id === data.id);
-				if (idx !== -1) {
+				const idx = messages?.findIndex((message) => message.id === data.id);
+				if (idx !== undefined && idx !== -1 && messages) {
 					messages[idx] = data;
 				}
 			} else if (type === 'typing' && event.message_id === null) {
@@ -208,7 +208,7 @@
 				created_at: ts,
 				updated_at: ts
 			},
-			...messages
+			...(messages ?? [])
 		];
 
 		const res = await sendMessage(localStorage.token, id, message).catch((error) => {
@@ -216,7 +216,7 @@
 			return null;
 		});
 
-		if (res) {
+		if (res && messagesContainerElement) {
 			messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
 		}
 
@@ -284,15 +284,15 @@
 					} else {
 						return e.name;
 					}
-				}, '')} • Open WebUI</title
+				}, '')} • AOS-GPT </title
 		>
 	{:else}
-		<title>#{channel?.name ?? 'Channel'} • Open WebUI</title>
+		<title>#{channel?.name ?? 'Channel'} • AOS-GPT</title>
 	{/if}
 </svelte:head>
 
 <div
-	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+	class="h-screen max-h-dvh transition-width duration-200 ease-in-out {$showSidebar
 		? 'md:max-w-[calc(100%-var(--sidebar-width))]'
 		: ''} w-full max-w-full flex flex-col"
 	id="channel-container"
@@ -302,7 +302,7 @@
 			<Navbar
 				{channel}
 				onPin={(messageId, pinned) => {
-					messages = messages.map((message) => {
+					messages = messages?.map((message) => {
 						if (message.id === messageId) {
 							return {
 								...message,
@@ -310,7 +310,7 @@
 							};
 						}
 						return message;
-					});
+					}) ?? null;
 				}}
 				onUpdate={async () => {
 					channel = await getChannelById(localStorage.token, id).catch((error) => {
@@ -326,7 +326,7 @@
 						id="messages-container"
 						bind:this={messagesContainerElement}
 						on:scroll={(e) => {
-							scrollEnd = Math.abs(messagesContainerElement.scrollTop) <= 50;
+							scrollEnd = Math.abs(messagesContainerElement?.scrollTop ?? 0) <= 50;
 						}}
 					>
 						{#key id}
@@ -347,10 +347,10 @@
 									const newMessages = await getChannelMessages(
 										localStorage.token,
 										id,
-										messages.length
+										messages?.length ?? 0
 									);
 
-									messages = [...messages, ...newMessages];
+									messages = [...(messages ?? []), ...newMessages];
 
 									if (newMessages.length < 50) {
 										top = true;
@@ -415,8 +415,8 @@
 				id="controls-resizer"
 			>
 				<div
-					class=" absolute -left-1.5 -right-1.5 -top-0 -bottom-0 z-20 cursor-col-resize bg-transparent"
-				/>
+					class=" absolute -left-1.5 -right-1.5 top-0 bottom-0 z-20 cursor-col-resize bg-transparent"
+				></div>
 			</PaneResizer>
 
 			<Pane defaultSize={50} minSize={30} class="h-full w-full">

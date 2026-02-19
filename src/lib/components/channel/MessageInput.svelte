@@ -44,10 +44,10 @@
 	export let placeholder = $i18n.t('Type here...');
 	export let chatInputElement;
 
-	export let id = null;
+	export let id: string | null = null;
 	export let channel = null;
 
-	export let typingUsers = [];
+	export let typingUsers: any[] = [];
 	export let inputLoading = false;
 
 	export let onSubmit: Function = (e) => {};

@@ -5,7 +5,20 @@
       "WebSearch",
       "Bash(git status:*)",
       "Bash(python -c:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(bun remove:*)",
+      "Bash(bun run build:*)",
+      "Bash(node -e:*)",
+      "Bash(echo:*)",
+      "Bash(git stash:*)",
+      "Bash(bunx svelte-kit sync:*)",
+      "Bash(bunx vite build:*)",
+      "Bash(node:*)",
+      "Bash(bun pm:*)",
+      "Bash(npm view:*)",
+      "Bash(bun add:*)"
     ]
   }
 }
