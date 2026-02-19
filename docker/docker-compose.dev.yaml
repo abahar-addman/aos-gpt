@@ -11,7 +11,7 @@ services:
       - ./src:/app/src
       - ./static:/app/static
     ports:
-      - ${OPEN_WEBUI_PORT-3000}:8080
+      - ${OPEN_WEBUI_PORT-3000}:1776
     environment:
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL-http://host.docker.internal:11434}
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY-}
@@ -38,7 +38,7 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
-    command: bash -c "cd /app/backend && uvicorn open_webui.main:app --reload --host 0.0.0.0 --port 8080"
+    command: bash -c "cd /app/backend && uvicorn open_webui.main:app --reload --host 0.0.0.0 --port 1776"
 
 volumes:
   open-webui: {}

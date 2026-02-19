@@ -1,33 +1,20 @@
 services:
-  open-webui:
+  aos-gpt:
     build:
-      context: .
-      dockerfile: Dockerfile
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
-    container_name: open-webui
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: dockerdude63/aos-gpt:latest
+    container_name: aos-gpt
     volumes:
-      - open-webui:/app/backend/data
+      - aos-gpt:/app/backend/data
     ports:
-      - ${OPEN_WEBUI_PORT-3000}:8080
+      - ${OPEN_WEBUI_PORT-1776}:1776
+    env_file:
+      - ../.env
     environment:
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL-http://host.docker.internal:11434}
-      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY-}
+      # Defaults (only used if not set in .env)
       - CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN-*}
       - FORWARDED_ALLOW_IPS=${FORWARDED_ALLOW_IPS-*}
-      # Database
-      - DATABASE_URL=${DATABASE_URL-}
-      # Vector Database
-      - VECTOR_DB=${VECTOR_DB-}
-      - PGVECTOR_DB_URL=${PGVECTOR_DB_URL-}
-      # Storage (Azure Blob)
-      - STORAGE_PROVIDER=${STORAGE_PROVIDER-}
-      - AZURE_STORAGE_ENDPOINT=${AZURE_STORAGE_ENDPOINT-}
-      - AZURE_STORAGE_CONTAINER_NAME=${AZURE_STORAGE_CONTAINER_NAME-}
-      - AZURE_STORAGE_KEY=${AZURE_STORAGE_KEY-}
-      - AZURE_PIPELINE_CONTAINER_NAME=${AZURE_PIPELINE_CONTAINER_NAME-aos-pipeline}
-      # Redis
-      - REDIS_URL=${REDIS_URL-}
-      # Privacy
       - SCARF_NO_ANALYTICS=${SCARF_NO_ANALYTICS-true}
       - DO_NOT_TRACK=${DO_NOT_TRACK-true}
       - ANONYMIZED_TELEMETRY=${ANONYMIZED_TELEMETRY-false}
@@ -36,4 +23,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  open-webui: {}
+  aos-gpt: {}

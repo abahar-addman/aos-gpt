@@ -18,7 +18,8 @@
       "Bash(node:*)",
       "Bash(bun pm:*)",
       "Bash(npm view:*)",
-      "Bash(bun add:*)"
+      "Bash(bun add:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

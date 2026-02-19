@@ -24,23 +24,20 @@ ARG UID=0
 ARG GID=0
 
 ######## WebUI frontend ########
-FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
+FROM --platform=$BUILDPLATFORM oven/bun:1-alpine AS build
 ARG BUILD_HASH
-
-# Set Node.js options (heap limit Allocation failed - JavaScript heap out of memory)
-# ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 WORKDIR /app
 
 # to store git revision in build
 RUN apk add --no-cache git
 
-COPY package.json package-lock.json ./
-RUN npm ci --force
+COPY package.json bun.lock* ./
+RUN bun install --frozen-lockfile || bun install
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
-RUN npm run build
+RUN bun run build
 
 ######## WebUI backend ########
 FROM python:3.12-slim-bookworm AS base
@@ -62,7 +59,7 @@ ENV PYTHONUNBUFFERED=1
 
 ## Basis ##
 ENV ENV=prod \
-    PORT=8080 \
+    PORT=1776 \
     # pass build args to the build
     USE_OLLAMA_DOCKER=${USE_OLLAMA} \
     USE_CUDA_DOCKER=${USE_CUDA} \
@@ -179,9 +176,9 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
 
-EXPOSE 8080
+EXPOSE 1776
 
-HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1
+HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-1776}/health | jq -ne 'input.status == true' || exit 1
 
 # Minimal, atomic permission hardening for OpenShift (arbitrary UID):
 # - Group 0 owns /app and /root

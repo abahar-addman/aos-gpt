@@ -591,7 +591,7 @@ v{VERSION} - building the best AI user interface.
 https://github.com/open-webui/open-webui
 """)
 except UnicodeEncodeError:
-    print(f"\nOpen WebUI v{VERSION} - building the best AI user interface.")
+    print(f"\nAOS-GPT v{VERSION} - building the best AI user interface.")
     if WEBUI_BUILD_HASH != "dev-build":
         print(f"Commit: {WEBUI_BUILD_HASH}")
     print("https://github.com/open-webui/open-webui\n")
@@ -706,7 +706,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# For Open WebUI OIDC/OAuth2
+# For AOS-GPT OIDC/OAuth2
 oauth_manager = OAuthManager(app)
 app.state.oauth_manager = oauth_manager
 
@@ -2205,7 +2205,7 @@ async def get_app_changelog():
 @app.get("/api/usage")
 async def get_current_usage(user=Depends(get_verified_user)):
     """
-    Get current usage statistics for Open WebUI.
+    Get current usage statistics for AOS-GPT.
     This is an experimental endpoint and subject to change.
     """
     try:
