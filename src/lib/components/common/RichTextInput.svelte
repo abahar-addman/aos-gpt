@@ -687,16 +687,26 @@
 			const { SocketIOCollaborationProvider } = await import('./RichTextInput/Collaboration');
 			provider = new SocketIOCollaborationProvider(documentId, socket, user, content);
 		}
-		editor = new Editor({
-			element: element,
-			extensions: [
+		const editorExtensions: any[] = [
 				StarterKit.configure({
 					link: link,
 					// When rich text is off, disable Strike from StarterKit so we can
 					// re-add it below without its Mod-Shift-s shortcut (which conflicts
 					// with the Toggle Sidebar shortcut). When rich text is on, the user
 					// can undo strikethrough via the toolbar, so the shortcut is fine.
-					...(richText ? {} : { strike: false })
+					...(richText ? {} : { strike: false }),
+					// When rich text is on, disable extensions that are re-added via
+					// CodeBlockLowlight and ListKit to avoid duplicate keyed-plugin errors
+					// in TipTap 3.20+.
+					...(richText
+						? {
+								codeBlock: false,
+								bulletList: false,
+								orderedList: false,
+								listItem: false,
+								listKeymap: false
+							}
+						: {})
 				}),
 				...(dragHandle ? [ListItemDragHandle] : []),
 				Placeholder.configure({ placeholder: () => _placeholder, showOnlyWhenEditable: false }),
@@ -796,12 +806,17 @@
 						]
 					: []),
 				...(collaboration && provider ? [provider.getEditorExtension()] : [])
-			],
+			];
+		editor = new Editor({
+			extensions: editorExtensions,
+			element: element,
 			content: collaboration ? undefined : content,
 			autofocus: messageInput ? true : false,
 			onTransaction: () => {
 				// force re-render so `editor.isActive` works as expected
 				editor = editor;
+			},
+			onUpdate: () => {
 				if (!editor) return;
 
 				htmlValue = editor.getHTML();

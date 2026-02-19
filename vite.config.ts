@@ -43,6 +43,23 @@ export default defineConfig({
 		APP_VERSION: JSON.stringify(process.env.npm_package_version),
 		APP_BUILD_HASH: JSON.stringify(process.env.APP_BUILD_HASH || 'dev-build')
 	},
+	resolve: {
+		dedupe: [
+			'prosemirror-state',
+			'prosemirror-view',
+			'prosemirror-model',
+			'prosemirror-transform',
+			'prosemirror-keymap',
+			'prosemirror-inputrules',
+			'prosemirror-gapcursor',
+			'prosemirror-dropcursor',
+			'prosemirror-history',
+			'prosemirror-commands',
+			'prosemirror-schema-list',
+			'prosemirror-tables',
+			'prosemirror-collab'
+		]
+	},
 	build: {
 		sourcemap: true
 	},

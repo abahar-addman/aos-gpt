@@ -1,6 +1,6 @@
 {
-  "name": "Open WebUI",
-  "short_name": "WebUI",
+  "name": "Open AOS GPT",
+  "short_name": "AOS-GPT",
   "icons": [
     {
       "src": "/static/web-app-manifest-192x192.png",

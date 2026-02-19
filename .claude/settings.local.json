@@ -19,7 +19,11 @@
       "Bash(bun pm:*)",
       "Bash(npm view:*)",
       "Bash(bun add:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npx vite build)",
+      "Bash(grep:*)",
+      "Bash(tr:*)",
+      "Bash(python3 -c \" with open\\(''node_modules/@tiptap/extension-list/dist/index.js''\\) as f: content = f.read\\(\\) # search for ''plugin'' case insensitive import re matches = re.findall\\(r''.{0,40}plugin.{0,40}'', content, re.IGNORECASE\\) for m in matches[:20]: print\\(m\\) \")"
     ]
   }
 }
