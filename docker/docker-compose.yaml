@@ -24,3 +24,9 @@ services:
 
 volumes:
   aos-gpt: {}
+
+# Usage:
+#   Build locally:  docker compose -f docker/docker-compose.yaml build
+#   Push to hub:    docker compose -f docker/docker-compose.yaml push
+#   Build & push:   docker compose -f docker/docker-compose.yaml build && docker compose -f docker/docker-compose.yaml push
+#   Run:            docker compose -f docker/docker-compose.yaml up -d

@@ -1,24 +1,67 @@
+# Git and IDE
+.git
 .github
 .DS_Store
+.idea
+.vscode
+
+# Documentation
 docs
 kubernetes
+
+# Dependencies - these get installed fresh in the container
 node_modules
-/.svelte-kit
-/package
+**/node_modules
+
+# SvelteKit build artifacts (critical - these are huge!)
+.svelte-kit
+**/.svelte-kit
+
+# Package output
+package
+
+# Environment files
 .env
 .env.*
+!.env.example
+
+# Build timestamps
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Python
 __pycache__
-.idea
+**/__pycache__
+*.pyc
+*.pyo
 venv
 **/venv
 **/.venv
 backend/venv
-build
-_old
-uploads
 .ipynb_checkpoints
-**/*.db
-_test
+
+# Build outputs (frontend build happens in container)
+build
+dist
+
+# Data and uploads (should be mounted as volumes)
 backend/data/*
+!backend/data/readme.txt
+uploads
+**/uploads
+
+# Database files
+**/*.db
+
+# Test and temp files
+_old
+_test
+cypress/videos
+cypress/screenshots
+
+# Large binary/wasm files that shouldn't be in context
+**/*.wasm
+**/pyodide/*.whl
+
+# Static pyodide (will be built/downloaded in container if needed)
+static/pyodide
