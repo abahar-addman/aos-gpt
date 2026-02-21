@@ -337,7 +337,9 @@ def load_speech_pipeline(request):
 
     if request.app.state.speech_speaker_embeddings_dataset is None:
         request.app.state.speech_speaker_embeddings_dataset = load_dataset(
-            "Matthijs/cmu-arctic-xvectors", split="validation"
+            "Matthijs/cmu-arctic-xvectors",
+            split="validation",
+            revision="refs/convert/parquet",
         )
 
 
@@ -628,12 +630,22 @@ def transcription_handler(request, file_path, metadata, user=None):
     ]
 
     if request.app.state.config.STT_ENGINE == "":
+        whisper_model_name = request.app.state.config.WHISPER_MODEL or "base"
         if request.app.state.faster_whisper_model is None:
+            log.info(
+                "Initializing faster-whisper model: %s",
+                whisper_model_name,
+            )
             request.app.state.faster_whisper_model = set_faster_whisper_model(
-                request.app.state.config.WHISPER_MODEL
+                whisper_model_name, auto_update=True
             )
 
         model = request.app.state.faster_whisper_model
+        if model is None:
+            raise Exception(
+                f"Failed to load Whisper model '{whisper_model_name}'. "
+                "Check that the model name is valid and that faster-whisper is installed correctly."
+            )
         segments, info = model.transcribe(
             file_path,
             beam_size=5,

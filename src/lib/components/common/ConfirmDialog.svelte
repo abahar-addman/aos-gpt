@@ -66,13 +66,17 @@
 	$: if (mounted) {
 		if (show && modalElement) {
 			document.body.appendChild(modalElement);
-			focusTrap = FocusTrap.createFocusTrap(modalElement);
+			focusTrap = FocusTrap.createFocusTrap(modalElement, {
+				returnFocusOnDeactivate: false
+			});
 			focusTrap.activate();
 
 			window.addEventListener('keydown', handleKeyDown);
 			document.body.style.overflow = 'hidden';
 		} else if (modalElement) {
-			focusTrap.deactivate();
+			if (focusTrap) {
+				focusTrap.deactivate();
+			}
 
 			window.removeEventListener('keydown', handleKeyDown);
 			document.body.removeChild(modalElement);

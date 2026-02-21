@@ -261,8 +261,12 @@ class AppConfig:
             self._state[key].save()
 
             if self._redis and ENABLE_PERSISTENT_CONFIG:
-                redis_key = f"{self._redis_key_prefix}:config:{key}"
-                self._redis.set(redis_key, json.dumps(self._state[key].value))
+                try:
+                    redis_key = f"{self._redis_key_prefix}:config:{key}"
+                    self._redis.set(redis_key, json.dumps(self._state[key].value))
+                except Exception:
+                    # Redis unavailable — value is still saved locally
+                    pass
 
     def __getattr__(self, key):
         if key not in self._state:
@@ -270,20 +274,24 @@ class AppConfig:
 
         # If Redis is available and persistent config is enabled, check for an updated value
         if self._redis and ENABLE_PERSISTENT_CONFIG:
-            redis_key = f"{self._redis_key_prefix}:config:{key}"
-            redis_value = self._redis.get(redis_key)
+            try:
+                redis_key = f"{self._redis_key_prefix}:config:{key}"
+                redis_value = self._redis.get(redis_key)
 
-            if redis_value is not None:
-                try:
-                    decoded_value = json.loads(redis_value)
+                if redis_value is not None:
+                    try:
+                        decoded_value = json.loads(redis_value)
 
-                    # Update the in-memory value if different
-                    if self._state[key].value != decoded_value:
-                        self._state[key].value = decoded_value
-                        log.info(f"Updated {key} from Redis: {decoded_value}")
+                        # Update the in-memory value if different
+                        if self._state[key].value != decoded_value:
+                            self._state[key].value = decoded_value
+                            log.info(f"Updated {key} from Redis: {decoded_value}")
 
-                except json.JSONDecodeError:
-                    log.error(f"Invalid JSON format in Redis for {key}: {redis_value}")
+                    except json.JSONDecodeError:
+                        log.error(f"Invalid JSON format in Redis for {key}: {redis_value}")
+            except Exception:
+                # Redis unavailable — fall back to in-memory value
+                pass
 
         return self._state[key].value
 

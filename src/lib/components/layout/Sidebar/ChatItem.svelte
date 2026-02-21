@@ -539,7 +539,9 @@
 						cloneChatHandler(id);
 					}}
 					shareHandler={() => {
-						showShareChatModal = true;
+						setTimeout(() => {
+							showShareChatModal = true;
+						}, 100);
 					}}
 					{moveChatHandler}
 					archiveChatHandler={() => {
@@ -547,7 +549,12 @@
 					}}
 					{renameHandler}
 					deleteHandler={() => {
-						showDeleteConfirm = true;
+						// Delay to let the dropdown's focus-trap fully deactivate
+						// before the confirm dialog's focus-trap activates,
+						// preventing an infinite focus loop between the two traps.
+						setTimeout(() => {
+							showDeleteConfirm = true;
+						}, 100);
 					}}
 					onClose={() => {
 						dispatch('unselect');
