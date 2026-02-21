@@ -938,6 +938,13 @@ def process_tool_result(
                         "message": f"{tool_function_name}: Embedded UI result is active and visible to the user.",
                     }
 
+    # Extract chart_html from dict results and move to embeds for iframe rendering
+    if isinstance(tool_result, dict) and "chart_html" in tool_result:
+        chart_html = tool_result.pop("chart_html")
+        tool_result.pop("chart_json", None)  # Remove large JSON too
+        if chart_html:
+            tool_result_embeds.append(chart_html)
+
     tool_result_files = []
 
     if isinstance(tool_result, list):

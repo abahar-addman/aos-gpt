@@ -231,7 +231,8 @@
 			/\bimport\s+seaborn\b|\bfrom\s+seaborn\b/.test(code) ? 'seaborn' : null,
 			/\bimport\s+sympy\b|\bfrom\s+sympy\b/.test(code) ? 'sympy' : null,
 			/\bimport\s+tiktoken\b|\bfrom\s+tiktoken\b/.test(code) ? 'tiktoken' : null,
-			/\bimport\s+pytz\b|\bfrom\s+pytz\b/.test(code) ? 'pytz' : null
+			/\bimport\s+pytz\b|\bfrom\s+pytz\b/.test(code) ? 'pytz' : null,
+			/\bimport\s+plotly\b|\bfrom\s+plotly\b/.test(code) ? 'plotly' : null
 		].filter(Boolean);
 
 		console.log(packages);
@@ -283,6 +284,26 @@
 						} else if (stdout.includes(`${line}`)) {
 							stdout = stdout.replace(`${line}`, ``);
 						}
+					} else if (line.startsWith('data:text/html;base64,')) {
+						if (files) {
+							files.push({
+								type: 'text/html',
+								data: line
+							});
+						} else {
+							files = [
+								{
+									type: 'text/html',
+									data: line
+								}
+							];
+						}
+
+						if (stdout.includes(`${line}\n`)) {
+							stdout = stdout.replace(`${line}\n`, ``);
+						} else if (stdout.includes(`${line}`)) {
+							stdout = stdout.replace(`${line}`, ``);
+						}
 					}
 				}
 			}
@@ -312,12 +333,31 @@
 						} else if (result.startsWith(`${line}`)) {
 							result = result.replace(`${line}`, ``);
 						}
+					} else if (line.startsWith('data:text/html;base64,')) {
+						if (files) {
+							files.push({
+								type: 'text/html',
+								data: line
+							});
+						} else {
+							files = [
+								{
+									type: 'text/html',
+									data: line
+								}
+							];
+						}
+
+						if (result.startsWith(`${line}\n`)) {
+							result = result.replace(`${line}\n`, ``);
+						} else if (result.startsWith(`${line}`)) {
+							result = result.replace(`${line}`, ``);
+						}
 					}
 				}
 			}
 
 			data['stderr'] && (stderr = data['stderr']);
-			data['result'] && (result = data['result']);
 
 			executing = false;
 		};
@@ -600,6 +640,14 @@
 											{#each files as file}
 												{#if file.type.startsWith('image')}
 													<img src={file.data} alt="Output" class=" w-full max-w-[36rem]" />
+												{:else if file.type === 'text/html'}
+													<iframe
+														srcdoc={atob(file.data.replace('data:text/html;base64,', ''))}
+														class="w-full max-w-[36rem] rounded-lg border"
+														style="height: 500px;"
+														sandbox="allow-scripts allow-same-origin"
+														title="Plotly Chart"
+													></iframe>
 												{/if}
 											{/each}
 										</div>

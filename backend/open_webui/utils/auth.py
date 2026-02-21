@@ -218,11 +218,16 @@ async def is_valid_token(request, decoded) -> bool:
         jti = decoded.get("jti")
 
         if jti:
-            revoked = await request.app.state.redis.get(
-                f"{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked"
-            )
-            if revoked:
-                return False
+            try:
+                revoked = await request.app.state.redis.get(
+                    f"{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked"
+                )
+                if revoked:
+                    return False
+            except Exception as e:
+                log.warning(f"Redis error during token validation: {e}")
+                # Gracefully degrade — treat token as valid if Redis is unreachable
+                pass
 
     return True
 
@@ -245,12 +250,15 @@ async def invalidate_token(request, token):
             )  # Calculate time-to-live for the token
 
             if ttl > 0:
-                # Store the revoked token in Redis with an expiration time
-                await request.app.state.redis.set(
-                    f"{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked",
-                    "1",
-                    ex=ttl,
-                )
+                try:
+                    # Store the revoked token in Redis with an expiration time
+                    await request.app.state.redis.set(
+                        f"{REDIS_KEY_PREFIX}:auth:token:{jti}:revoked",
+                        "1",
+                        ex=ttl,
+                    )
+                except Exception as e:
+                    log.warning(f"Redis error during token invalidation: {e}")
 
 
 def extract_token_from_auth_header(auth_header: str):

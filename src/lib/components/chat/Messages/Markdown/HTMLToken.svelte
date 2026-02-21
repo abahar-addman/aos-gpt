@@ -11,7 +11,13 @@
 	let html: string | null = null;
 
 	$: if (token.type === 'html' && token?.text) {
-		html = DOMPurify.sanitize(token.text);
+		// Strip tokens that are clearly inline chart/script blocks (e.g. Plotly, Chart.js)
+		// These should be rendered via tool embeds, not inline in the chat
+		const raw = token.text;
+		const looksLikeChartBlock =
+			/\b(Plotly\.newPlot|new\s+Chart\(|Chart\.defaults)\b/i.test(raw) ||
+			(/<script\b/i.test(raw) && /<\/script>/i.test(raw));
+		html = looksLikeChartBlock ? null : DOMPurify.sanitize(raw);
 	} else {
 		html = null;
 	}

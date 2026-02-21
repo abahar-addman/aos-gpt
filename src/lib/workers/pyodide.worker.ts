@@ -77,6 +77,21 @@ self.onmessage = async (event) => {
 	await loadPyodideAndPackages(self.packages);
 
 	try {
+		// check if plotly is imported in the code
+		if (code.includes('plotly')) {
+			// Override fig.show() to return HTML via base64 data URI
+			await self.pyodide.runPythonAsync(`import base64
+
+import plotly.graph_objects as _plotly_go
+
+def _patched_show(self, *args, **kwargs):
+	html = self.to_html(full_html=True, include_plotlyjs='cdn')
+	html_b64 = base64.b64encode(html.encode('utf-8')).decode('utf-8')
+	print(f"data:text/html;base64,{html_b64}")
+
+_plotly_go.Figure.show = _patched_show`);
+		}
+
 		// check if matplotlib is imported in the code
 		if (code.includes('matplotlib')) {
 			// Override plt.show() to return base64 image
@@ -103,7 +118,24 @@ def show(*, block=None):
 	buf.close()
 	print(f"data:image/png;base64,{img_str}")
 
-matplotlib.pyplot.show = show`);
+matplotlib.pyplot.show = show
+
+# Patch savefig to capture output as base64 instead of writing to filesystem
+_original_savefig = matplotlib.pyplot.savefig
+def _patched_savefig(fname, *args, **kwargs):
+	if isinstance(fname, str):
+		# Redirect file saves to base64 output
+		buf = BytesIO()
+		kwargs.pop('bbox_inches', None)
+		_original_savefig(buf, *args, format='png', bbox_inches='tight', **kwargs)
+		buf.seek(0)
+		img_str = base64.b64encode(buf.read()).decode('utf-8')
+		buf.close()
+		print(f"data:image/png;base64,{img_str}")
+	else:
+		# If fname is a file-like object (like BytesIO), pass through normally
+		_original_savefig(fname, *args, **kwargs)
+matplotlib.pyplot.savefig = _patched_savefig`);
 		}
 
 		self.result = await self.pyodide.runPythonAsync(code);

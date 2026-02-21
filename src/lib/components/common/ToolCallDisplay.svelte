@@ -86,7 +86,7 @@
 			<div class="w-full text-xs text-gray-500">
 				{attributes.name}
 			</div>
-			{#each embeds as embed, idx}
+			{#each embeds as embed, idx (embed?.length ? `${componentId}-${idx}-${embed.length}` : `${componentId}-${idx}`)}
 				<div class="my-2" id={`${componentId}-tool-call-embed-${idx}`}>
 					<FullHeightIframe
 						src={embed}

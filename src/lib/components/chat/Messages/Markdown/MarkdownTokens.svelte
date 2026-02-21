@@ -326,12 +326,14 @@
 
 		{#if token?.attributes?.type === 'tool_calls'}
 			<!-- Tool calls have dedicated handling with ToolCallDisplay component -->
-			<ToolCallDisplay
-				id={`${id}-${tokenIdx}-tc`}
-				attributes={token.attributes}
-				open={false}
-				className="w-full space-y-1"
-			/>
+			{#key token.attributes?.id || `${id}-${tokenIdx}-tc`}
+				<ToolCallDisplay
+					id={`${id}-${tokenIdx}-tc`}
+					attributes={token.attributes}
+					open={false}
+					className="w-full space-y-1"
+				/>
+			{/key}
 		{:else if textContent.length > 0}
 			<Collapsible
 				title={token.summary}

@@ -416,8 +416,10 @@ def install_frontmatter_requirements(requirements: str):
                 + PIP_PACKAGE_INDEX_OPTIONS
             )
         except Exception as e:
-            log.error(f"Error installing packages: {' '.join(req_list)}")
-            raise e
+            log.warning(
+                f"Failed to install packages: {' '.join(req_list)}. "
+                f"They may already be installed. Error: {e}"
+            )
 
     else:
         log.info("No requirements found in frontmatter.")
