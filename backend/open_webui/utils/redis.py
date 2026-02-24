@@ -218,7 +218,19 @@ def get_redis_connection(
                 redis_url, decode_responses=decode_responses
             )
         elif redis_url:
-            connection = redis.from_url(redis_url, decode_responses=decode_responses)
+            timeout_kwargs = {}
+            if REDIS_SOCKET_CONNECT_TIMEOUT:
+                timeout_kwargs["socket_connect_timeout"] = REDIS_SOCKET_CONNECT_TIMEOUT
+                timeout_kwargs["socket_timeout"] = REDIS_SOCKET_CONNECT_TIMEOUT
+            else:
+                timeout_kwargs["socket_connect_timeout"] = 5
+                timeout_kwargs["socket_timeout"] = 5
+            connection = redis.from_url(
+                redis_url,
+                decode_responses=decode_responses,
+                retry_on_timeout=False,
+                **timeout_kwargs,
+            )
     else:
         import redis
 
@@ -245,8 +257,18 @@ def get_redis_connection(
                 redis_url, decode_responses=decode_responses
             )
         elif redis_url:
+            timeout_kwargs = {}
+            if REDIS_SOCKET_CONNECT_TIMEOUT:
+                timeout_kwargs["socket_connect_timeout"] = REDIS_SOCKET_CONNECT_TIMEOUT
+                timeout_kwargs["socket_timeout"] = REDIS_SOCKET_CONNECT_TIMEOUT
+            else:
+                timeout_kwargs["socket_connect_timeout"] = 5
+                timeout_kwargs["socket_timeout"] = 5
             connection = redis.Redis.from_url(
-                redis_url, decode_responses=decode_responses
+                redis_url,
+                decode_responses=decode_responses,
+                retry_on_timeout=False,
+                **timeout_kwargs,
             )
 
     _CONNECTION_CACHE[cache_key] = connection
