@@ -289,9 +289,9 @@ class AppConfig:
 
                     except json.JSONDecodeError:
                         log.error(f"Invalid JSON format in Redis for {key}: {redis_value}")
-            except Exception:
+            except Exception as e:
                 # Redis unavailable — fall back to in-memory value
-                pass
+                log.debug(f"Redis unavailable for config key '{key}': {e}")
 
         return self._state[key].value
 
@@ -333,6 +333,16 @@ if JWT_EXPIRES_IN.value == "-1":
         "⚠️  SECURITY WARNING: JWT_EXPIRES_IN is set to '-1'\n"
         "    See: https://docs.openwebui.com/getting-started/env-configuration\n"
     )
+
+####################################
+# LangGraph Agent config
+####################################
+
+ENABLE_LANGGRAPH_AGENT = PersistentConfig(
+    "ENABLE_LANGGRAPH_AGENT",
+    "langgraph.enable",
+    os.environ.get("ENABLE_LANGGRAPH_AGENT", "False").lower() == "true",
+)
 
 ####################################
 # OAuth config

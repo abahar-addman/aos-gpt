@@ -2490,13 +2490,43 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 tools_dict[name] = tool_dict
 
     if tools_dict:
-        if metadata.get("params", {}).get("function_calling") == "native":
+        function_calling_mode = metadata.get("params", {}).get("function_calling", "")
+
+        if function_calling_mode == "native":
             # If the function calling is native, then call the tools function calling handler
             metadata["tools"] = tools_dict
             form_data["tools"] = [
                 {"type": "function", "function": tool.get("spec", {})}
                 for tool in tools_dict.values()
             ]
+
+        elif function_calling_mode == "langgraph":
+            # LangGraph agent mode: recursive tool calling with analysis between iterations
+            try:
+                from open_webui.utils.langgraph.runner import run_langgraph_agent
+
+                langgraph_result = await run_langgraph_agent(
+                    request=request,
+                    form_data=form_data,
+                    tools_dict=tools_dict,
+                    extra_params=extra_params,
+                    user=user,
+                    metadata=metadata,
+                    model_id=form_data.get("model", ""),
+                    event_emitter=event_emitter,
+                    event_caller=event_caller,
+                )
+                metadata["langgraph_output"] = langgraph_result
+            except Exception as e:
+                log.exception(f"LangGraph agent error: {e}")
+                # Fall back to non-native mode
+                try:
+                    form_data, flags = await chat_completion_tools_handler(
+                        request, form_data, extra_params, user, models, tools_dict
+                    )
+                    sources.extend(flags.get("sources", []))
+                except Exception as e2:
+                    log.exception(e2)
 
         else:
             # If the function calling is not native, then call the tools function calling handler
@@ -4544,6 +4574,24 @@ async def streaming_chat_response_handler(response, ctx):
 
 
 async def process_chat_response(response, ctx):
+    # LangGraph agent mode: response was already streamed via event_emitter
+    metadata = ctx.get("metadata", {})
+    if "langgraph_output" in metadata:
+        langgraph_result = metadata["langgraph_output"]
+        # Return a minimal JSON response; all streaming was done during process_chat_payload
+        return JSONResponse(
+            content={
+                "choices": [
+                    {
+                        "message": {
+                            "role": "assistant",
+                            "content": langgraph_result.get("content", ""),
+                        }
+                    }
+                ],
+            }
+        )
+
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
         return await non_streaming_chat_response_handler(response, ctx)
