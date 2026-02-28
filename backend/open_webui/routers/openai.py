@@ -790,6 +790,25 @@ def is_openai_reasoning_model(model: str) -> bool:
     return model.lower().startswith(("o1", "o3", "o4", "gpt-5"))
 
 
+def claude_thinking_handler(payload):
+    """
+    Handle Claude extended thinking parameters.
+    Injects thinking config and ensures compatible settings.
+    """
+    payload["thinking"] = {"type": "enabled", "budget_tokens": 10000}
+
+    # Ensure max_tokens has room for both thinking and response
+    current_max = payload.get("max_tokens", 4096)
+    if current_max < 16000:
+        payload["max_tokens"] = 16000
+
+    # Remove temperature and top_p (incompatible with extended thinking)
+    payload.pop("temperature", None)
+    payload.pop("top_p", None)
+
+    return payload
+
+
 def convert_to_azure_payload(url, payload: dict, api_version: str):
     model = payload.get("model", "")
 
@@ -1034,9 +1053,17 @@ async def generate_chat_completion(
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
 
+    extended_thinking = (metadata or {}).get("params", {}).get("extended_thinking")
+    has_tools = bool(payload.get("tools"))
+
     # Check if model is a reasoning model that needs special handling
     if is_openai_reasoning_model(payload["model"]):
         payload = openai_reasoning_model_handler(payload)
+    elif extended_thinking is True and not has_tools:
+        # Enable thinking only when explicitly toggled on AND no tools in payload.
+        # When tools are present the LangGraph loop handles the
+        # think -> call -> analyse cycle at the application level instead.
+        payload = claude_thinking_handler(payload)
     elif "api.openai.com" not in url:
         # Remove "max_completion_tokens" from the payload for backward compatibility
         if "max_completion_tokens" in payload:

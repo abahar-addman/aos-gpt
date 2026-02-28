@@ -1102,6 +1102,19 @@ async def chat_completion_tools_handler(
 
                 tool_function_params = tool_call.get("parameters", {})
 
+                # Emit status so the user sees which tool is running
+                if event_emitter:
+                    await event_emitter(
+                        {
+                            "type": "status",
+                            "data": {
+                                "action": "tool_calling",
+                                "description": f"Running {tool_function_name}...",
+                                "done": False,
+                            },
+                        }
+                    )
+
                 tool = None
                 tool_type = ""
                 direct_tool = False
@@ -1221,6 +1234,20 @@ async def chat_completion_tools_handler(
     except Exception as e:
         log.debug(f"Error: {e}")
         content = None
+
+    # Emit completion status for tool calling
+    if event_emitter and sources:
+        tool_names = [s.get("source", {}).get("name", "tool") for s in sources]
+        await event_emitter(
+            {
+                "type": "status",
+                "data": {
+                    "action": "tool_calling",
+                    "description": f"Completed {', '.join(tool_names)}",
+                    "done": True,
+                },
+            }
+        )
 
     log.debug(f"tool_contexts: {sources}")
 
@@ -1844,6 +1871,7 @@ def apply_params_to_form_data(form_data, model):
         "stream_delta_chunk_size": int,
         "function_calling": str,
         "reasoning_tags": list,
+        "extended_thinking": bool,
         "system": str,
     }
 
@@ -2490,6 +2518,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 tools_dict[name] = tool_dict
 
     if tools_dict:
+        # Let the user know we're preparing tools
+        if event_emitter:
+            tool_names = list(tools_dict.keys())
+            await event_emitter(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "tool_calling",
+                        "description": f"Preparing tools ({', '.join(tool_names)})...",
+                        "done": False,
+                    },
+                }
+            )
+
         function_calling_mode = metadata.get("params", {}).get("function_calling", "")
 
         if function_calling_mode == "native":
@@ -4041,6 +4083,17 @@ async def streaming_chat_response_handler(response, ctx):
                         )
                         tool_args = tool_call.get("function", {}).get("arguments", "{}")
 
+                        await event_emitter(
+                            {
+                                "type": "status",
+                                "data": {
+                                    "action": "tool_calling",
+                                    "description": f"Running {tool_function_name}...",
+                                    "done": False,
+                                },
+                            }
+                        )
+
                         tool_function_params = {}
                         try:
                             # json.loads cannot be used because some models do not produce valid JSON
@@ -4171,6 +4224,18 @@ async def streaming_chat_response_handler(response, ctx):
                                 ),
                             }
                         )
+
+                    tool_names = [tc.get("function", {}).get("name", "tool") for tc in response_tool_calls]
+                    await event_emitter(
+                        {
+                            "type": "status",
+                            "data": {
+                                "action": "tool_calling",
+                                "description": f"Completed {', '.join(tool_names)}",
+                                "done": True,
+                            },
+                        }
+                    )
 
                     # Update function_call statuses and append function_call_output items
                     for tc in response_tool_calls:

@@ -95,6 +95,7 @@ def dev(
         host=host,
         port=port,
         reload=reload,
+        reload_excludes=["data/*", "uploads/*"],
         forwarded_allow_ips="*",
     )
 

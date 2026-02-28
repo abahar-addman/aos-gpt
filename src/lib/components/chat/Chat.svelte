@@ -394,10 +394,12 @@
 
 				if (type === 'status') {
 					if (message?.statusHistory) {
-						message.statusHistory.push(data);
+						message.statusHistory = [...message.statusHistory, data];
 					} else {
 						message.statusHistory = [data];
 					}
+					// Trigger Svelte reactivity for the message object
+					history.messages[event.message_id] = message;
 				} else if (type === 'chat:completion') {
 					chatCompletionEventHandler(data, message, event.chat_id);
 				} else if (type === 'chat:tasks:cancel') {

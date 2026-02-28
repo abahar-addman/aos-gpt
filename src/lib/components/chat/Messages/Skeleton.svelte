@@ -1,38 +1,56 @@
 <script lang="ts">
+	import { onMount, onDestroy } from 'svelte';
+
 	export let size = 'md';
+
+	const sayings = [
+		'Warming up the neurons...',
+		'Thinking really hard...',
+		'Consulting the knowledge base...',
+		'Brewing a response...',
+		'Crunching the numbers...',
+		'Connecting the dots...',
+		'Gathering my thoughts...',
+		'Almost there...',
+		'Working on it...',
+		'Processing your request...',
+		'Putting it all together...',
+		'Reading between the lines...',
+		'On it...',
+		'Spinning up...',
+		'Assembling the answer...'
+	];
+
+	let currentIndex = Math.floor(Math.random() * sayings.length);
+	let currentSaying = sayings[currentIndex];
+	let interval: ReturnType<typeof setInterval>;
+
+	onMount(() => {
+		interval = setInterval(() => {
+			currentIndex = (currentIndex + 1) % sayings.length;
+			currentSaying = sayings[currentIndex];
+		}, 3000);
+	});
+
+	onDestroy(() => {
+		if (interval) clearInterval(interval);
+	});
 </script>
 
-<span
-	class="relative flex {size === 'md'
-		? 'size-3 my-2'
+<div
+	class="flex items-center gap-2 {size === 'md'
+		? 'py-0.5'
 		: size === 'xs'
-			? 'size-1.5 my-1'
-			: 'size-2 my-1'} mx-1"
+			? 'py-0'
+			: 'py-0.5'}"
 >
-	<span
-		class="absolute inline-flex h-full w-full animate-pulse rounded-full bg-gray-700 dark:bg-gray-200 opacity-75"
-	></span>
-	<span
-		class="relative inline-flex {size === 'md'
-			? 'size-3'
+	<div
+		class="shimmer {size === 'md'
+			? 'text-base'
 			: size === 'xs'
-				? 'size-1.5'
-				: 'size-2'} rounded-full bg-black dark:bg-white animate-size"
-	></span>
-</span>
-
-<style>
-	@keyframes size {
-		0%,
-		100% {
-			transform: scale(1);
-		}
-		50% {
-			transform: scale(1.25);
-		}
-	}
-
-	.animate-size {
-		animation: size 1.5s ease-in-out infinite;
-	}
-</style>
+				? 'text-xs'
+				: 'text-sm'} line-clamp-1"
+	>
+		{currentSaying}
+	</div>
+</div>

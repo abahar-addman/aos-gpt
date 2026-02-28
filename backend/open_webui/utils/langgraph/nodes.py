@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 
 from uuid import uuid4
 from starlette.responses import StreamingResponse
@@ -13,6 +14,7 @@ from open_webui.utils.middleware import output_id, serialize_output
 from open_webui.utils.langgraph.tools_adapter import execute_tool_call
 from open_webui.utils.langgraph.state import AgentState
 from open_webui.utils.task import get_task_model_id
+from open_webui.env import LANGGRAPH_AGENT_ANALYSIS_TRUNCATION
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +32,19 @@ async def call_llm(state: AgentState) -> dict:
     metadata = state["metadata"]
     output = state["output"]
     iteration = state["iteration"]
+
+    # Emit status so the user knows what phase we're in
+    if iteration > 0:
+        await event_emitter(
+            {
+                "type": "status",
+                "data": {
+                    "action": "tool_calling",
+                    "description": f"Generating response with tool results (pass {iteration + 1})...",
+                    "done": False,
+                },
+            }
+        )
 
     # Build messages: original messages + any tool call/result history from output
     if iteration > 0 and output:
@@ -88,10 +103,58 @@ async def call_llm(state: AgentState) -> dict:
 
                 delta = choices[0].get("delta", {})
 
+                # Handle reasoning_content (Claude extended thinking)
+                reasoning_text = (
+                    delta.get("reasoning_content")
+                    or delta.get("reasoning")
+                    or delta.get("thinking")
+                )
+                if reasoning_text:
+                    # Find or create a reasoning output item
+                    reasoning_item = None
+                    for item in output:
+                        if item.get("type") == "reasoning" and item.get("status") == "in_progress":
+                            reasoning_item = item
+                            break
+
+                    if reasoning_item is None:
+                        reasoning_item = {
+                            "type": "reasoning",
+                            "id": output_id("reasoning"),
+                            "status": "in_progress",
+                            "content": [{"type": "thinking", "thinking": ""}],
+                            "summary": [{"type": "summary_text", "text": "Thinking..."}],
+                            "_start_time": time.time(),
+                        }
+                        output.append(reasoning_item)
+
+                    reasoning_item["content"][0]["thinking"] += reasoning_text
+
+                    await event_emitter(
+                        {
+                            "type": "chat:completion",
+                            "data": {
+                                "content": serialize_output(output),
+                                "output": output,
+                            },
+                        }
+                    )
+
                 # Accumulate text content
                 delta_content = delta.get("content")
                 if delta_content:
                     content += delta_content
+
+                    # Close any open reasoning item
+                    for item in output:
+                        if item.get("type") == "reasoning" and item.get("status") == "in_progress":
+                            start = item.pop("_start_time", None)
+                            if start:
+                                item["summary"] = [{
+                                    "type": "summary_text",
+                                    "text": f"Thought for {time.time() - start:.1f}s",
+                                }]
+                            item["status"] = "completed"
 
                     # Update last message item in output
                     if output and output[-1].get("type") == "message":
@@ -153,6 +216,22 @@ async def call_llm(state: AgentState) -> dict:
             if choices:
                 message = choices[0].get("message", {})
                 content = message.get("content", "") or ""
+
+                # Handle reasoning_content in non-streaming response
+                reasoning_text = (
+                    message.get("reasoning_content")
+                    or message.get("reasoning")
+                    or message.get("thinking")
+                )
+                if reasoning_text:
+                    output.append({
+                        "type": "reasoning",
+                        "id": output_id("reasoning"),
+                        "status": "completed",
+                        "content": [{"type": "thinking", "thinking": reasoning_text}],
+                        "summary": [{"type": "summary_text", "text": "Thinking..."}],
+                    })
+
                 for tc in message.get("tool_calls", []):
                     tool_calls_map[len(tool_calls_map)] = tc
 
@@ -218,7 +297,19 @@ async def execute_tools(state: AgentState) -> dict:
     )
 
     tool_results = []
-    for tool_call in pending_tool_calls:
+    for i, tool_call in enumerate(pending_tool_calls):
+        tool_name = tool_call.get("function", {}).get("name", "tool")
+        await event_emitter(
+            {
+                "type": "status",
+                "data": {
+                    "action": "tool_calling",
+                    "description": f"Running {tool_name}" + (f" ({i + 1}/{len(pending_tool_calls)})" if len(pending_tool_calls) > 1 else "") + "...",
+                    "done": False,
+                },
+            }
+        )
+
         result = await execute_tool_call(
             tool_call=tool_call,
             tools_dict=tools_dict,
@@ -234,6 +325,18 @@ async def execute_tools(state: AgentState) -> dict:
         # Collect citation sources
         if result.get("sources"):
             all_sources.extend(result["sources"])
+
+    tool_names = [tc.get("function", {}).get("name", "tool") for tc in pending_tool_calls]
+    await event_emitter(
+        {
+            "type": "status",
+            "data": {
+                "action": "tool_calling",
+                "description": f"Completed {', '.join(tool_names)}",
+                "done": True,
+            },
+        }
+    )
 
     # Update function_call statuses to completed and append function_call_output items
     for tc in pending_tool_calls:
@@ -341,8 +444,8 @@ async def analyze_results(state: AgentState) -> dict:
     for r in tool_results:
         content = r.get("content", "")
         # Truncate very long results for the analysis prompt
-        if len(content) > 2000:
-            content = content[:2000] + "... [truncated]"
+        if len(content) > LANGGRAPH_AGENT_ANALYSIS_TRUNCATION:
+            content = content[:LANGGRAPH_AGENT_ANALYSIS_TRUNCATION] + "... [truncated]"
         tool_results_summary += f"- Tool result: {content}\n"
 
     # Available tools for context
