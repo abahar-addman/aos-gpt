@@ -15,7 +15,6 @@
 	import WrenchSolid from '../icons/WrenchSolid.svelte';
 	import CheckCircle from '../icons/CheckCircle.svelte';
 	import Image from './Image.svelte';
-	import FullHeightIframe from './FullHeightIframe.svelte';
 
 	export let id: string = '';
 	export let attributes: {
@@ -25,7 +24,6 @@
 		arguments?: string;
 		result?: string;
 		files?: string;
-		embeds?: string;
 		done?: string;
 	} = {};
 
@@ -72,7 +70,6 @@
 	$: args = decode(attributes?.arguments ?? '');
 	$: result = decode(attributes?.result ?? '');
 	$: files = parseJSONString(decode(attributes?.files ?? ''));
-	$: embeds = parseJSONString(decode(attributes?.embeds ?? ''));
 	$: isDone = attributes?.done === 'true';
 	$: isExecuting = attributes?.done && attributes?.done !== 'true';
 
@@ -80,28 +77,8 @@
 </script>
 
 <div {id} class={className}>
-	{#if embeds && Array.isArray(embeds) && embeds.length > 0}
-		<!-- Embed Mode: Show iframes without collapsible behavior -->
-		<div class="py-1 w-full cursor-pointer">
-			<div class="w-full text-xs text-gray-500">
-				{attributes.name}
-			</div>
-			{#each embeds as embed, idx (embed?.length ? `${componentId}-${idx}-${embed.length}` : `${componentId}-${idx}`)}
-				<div class="my-2" id={`${componentId}-tool-call-embed-${idx}`}>
-					<FullHeightIframe
-						src={embed}
-						{args}
-						allowScripts={true}
-						allowForms={true}
-						allowSameOrigin={true}
-						allowPopups={true}
-					/>
-				</div>
-			{/each}
-		</div>
-	{:else}
-		<!-- Tool call display -->
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<!-- Tool call display -->
+	<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
 			class="{buttonClassName} cursor-pointer"
 			on:pointerup={() => {
@@ -218,7 +195,6 @@
 				</div>
 			</div>
 		{/if}
-	{/if}
 
 	<!-- Files display (images etc.) when done -->
 	{#if isDone}

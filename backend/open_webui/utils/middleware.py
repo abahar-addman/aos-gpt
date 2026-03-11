@@ -355,9 +355,8 @@ def serialize_output(output: list) -> str:
                     if "text" in out:
                         result_text += out.get("text", "")
                 files = result_item.get("files")
-                embeds = result_item.get("embeds", "")
 
-                content += f'<details type="tool_calls" done="true" id="{call_id}" name="{name}" arguments="{html.escape(json.dumps(arguments))}" result="{html.escape(json.dumps(result_text, ensure_ascii=False))}" files="{html.escape(json.dumps(files)) if files else ""}" embeds="{html.escape(json.dumps(embeds))}">\n<summary>Tool Executed</summary>\n</details>\n'
+                content += f'<details type="tool_calls" done="true" id="{call_id}" name="{name}" arguments="{html.escape(json.dumps(arguments))}" result="{html.escape(json.dumps(result_text, ensure_ascii=False))}" files="{html.escape(json.dumps(files)) if files else ""}">\n<summary>Tool Executed</summary>\n</details>\n'
             else:
                 content += f'<details type="tool_calls" done="false" id="{call_id}" name="{name}" arguments="{html.escape(json.dumps(arguments))}">\n<summary>Executing...</summary>\n</details>\n'
 
@@ -2754,7 +2753,7 @@ async def background_tasks_handler(ctx):
 
             if isinstance(content, str):
                 content = re.sub(
-                    r"<details\b[^>]*>.*?<\/details>|!\[.*?\]\(.*?\)",
+                    r"<details\b[^>]*>.*?<\/details>|<thinking\b[^>]*>.*?(<\/thinking>|$)|<chart_plan\b[^>]*>.*?(<\/chart_plan>|$)|<plan\b[^>]*>.*?(<\/plan>|$)|\[SYSTEM INSTRUCTION[^\]]*\]|!\[.*?\]\(.*?\)",
                     "",
                     content,
                     flags=re.S | re.I,

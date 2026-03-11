@@ -89,8 +89,20 @@ export const sanitizeResponseContent = (content: string) => {
 };
 
 export const processResponseContent = (content: string) => {
+	content = stripPipelineInternalTags(content);
 	content = processChineseContent(content);
 	return content.trim();
+};
+
+const stripPipelineInternalTags = (content: string): string => {
+	// Strip <thinking>/<chart_plan>/<plan> tags but keep content visible
+	// (these appear inside the <details> thinking block as inline reasoning)
+	content = content.replace(/<\/?thinking>/gi, '');
+	content = content.replace(/<chart_plan>([\s\S]*?)(<\/chart_plan>|$)/gi, '');
+	content = content.replace(/<plan>([\s\S]*?)(<\/plan>|$)/gi, '');
+	// Remove [SYSTEM INSTRUCTION ...] markers
+	content = content.replace(/\[SYSTEM INSTRUCTION[^\]]*\]/gi, '');
+	return content;
 };
 
 function isChineseChar(char: string): boolean {
@@ -862,6 +874,58 @@ export const removeAllDetails = (content) => {
 	});
 };
 
+export const extractAgentActivity = (
+	content: string
+): { activities: { summary: string; content: string }[]; mainContent: string } => {
+	const activities: { summary: string; content: string }[] = [];
+
+	// Only extract <details> blocks that are agent reasoning activities
+	// (Planning, Thinking, Review, etc.) — NOT tool_calls or other typed details
+	const agentActivitySummaries = /^(planning|thinking|review|reviewing|analysis|reasoning)$/i;
+
+	// Match closed <details> blocks — skip those with type= attributes (tool_calls, reasoning, code_interpreter)
+	let mainContent = content.replace(
+		/<details(?:\s+([^>]*))?>[\s\n]*(?:<summary>(.*?)<\/summary>)?[\s\n]*([\s\S]*?)<\/details>/gi,
+		(match, attrs, summary, innerContent) => {
+			// Skip <details> with type attributes (tool_calls, reasoning, code_interpreter)
+			if (attrs && /type\s*=/.test(attrs)) {
+				return match;
+			}
+			const trimmedSummary = (summary || '').trim();
+			if (trimmedSummary && agentActivitySummaries.test(trimmedSummary)) {
+				activities.push({
+					summary: trimmedSummary,
+					content: (innerContent || '').trim()
+				});
+				return '';
+			}
+			// Not an agent activity — leave in content
+			return match;
+		}
+	);
+
+	// Match unclosed <details> blocks (still streaming) — same filtering
+	mainContent = mainContent.replace(
+		/<details(?:\s+([^>]*))?>[\s\n]*(?:<summary>(.*?)<\/summary>)?[\s\n]*([\s\S]*)$/i,
+		(match, attrs, summary, innerContent) => {
+			if (attrs && /type\s*=/.test(attrs)) {
+				return match;
+			}
+			const trimmedSummary = (summary || '').trim();
+			if (trimmedSummary && agentActivitySummaries.test(trimmedSummary)) {
+				activities.push({
+					summary: trimmedSummary,
+					content: (innerContent || '').trim()
+				});
+				return '';
+			}
+			return match;
+		}
+	);
+
+	return { activities, mainContent: mainContent.trim() };
+};
+
 export const processDetails = (content) => {
 	content = removeDetails(content, ['reasoning', 'code_interpreter']);
 
@@ -1623,6 +1687,69 @@ export const renderVegaVisualization = async (spec: string, i18n?: any) => {
 	const view = new vega.View(vega.parse(vegaSpec), { renderer: 'none' });
 	const svg = await view.toSVG();
 	return svg;
+};
+
+export const isMermaidData = (code: string): boolean => {
+	const trimmed = code.trimStart();
+	// Match common mermaid diagram type declarations at the start of the content
+	const mermaidKeywords = /^(graph\s+(TB|BT|LR|RL|TD)|flowchart\s+(TB|BT|LR|RL|TD)|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|gitgraph|journey|mindmap|timeline|sankey|xychart|block-beta|packet-beta|architecture-beta|kanban|requirementDiagram|C4Context|C4Container|C4Component|C4Deployment|quadrantChart|zenuml)\b/i;
+	return mermaidKeywords.test(trimmed);
+};
+
+export const isPlotlyData = (code: string): boolean => {
+	try {
+		const parsed = JSON.parse(code);
+		// Plotly data has a "data" array with trace objects
+		if (Array.isArray(parsed?.data)) {
+			return true;
+		}
+		// Also detect single trace arrays (e.g. [{ x: [...], y: [...], type: "scatter" }])
+		if (Array.isArray(parsed) && parsed.length > 0 && (parsed[0].x || parsed[0].y || parsed[0].type)) {
+			return true;
+		}
+	} catch {
+		// Not valid JSON
+	}
+	return false;
+};
+
+export const renderPlotlyVisualization = (code: string): string => {
+	let plotlyData: any;
+	let plotlyLayout: any = {};
+	let plotlyConfig: any = { responsive: true };
+
+	try {
+		const parsed = JSON.parse(code);
+		if (Array.isArray(parsed)) {
+			// Raw array of traces
+			plotlyData = parsed;
+		} else {
+			plotlyData = parsed.data || [];
+			plotlyLayout = parsed.layout || {};
+			if (parsed.config) {
+				plotlyConfig = { ...plotlyConfig, ...parsed.config };
+			}
+		}
+	} catch {
+		throw new Error('Invalid Plotly JSON data');
+	}
+
+	return `<!DOCTYPE html>
+<html>
+<head>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+body { margin: 0; padding: 0; background: transparent; }
+#chart { width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<div id="chart"></div>
+<script>
+Plotly.newPlot('chart', ${JSON.stringify(plotlyData)}, ${JSON.stringify(plotlyLayout)}, ${JSON.stringify(plotlyConfig)});
+</script>
+</body>
+</html>`;
 };
 
 export const getCodeBlockContents = (content: string): object => {

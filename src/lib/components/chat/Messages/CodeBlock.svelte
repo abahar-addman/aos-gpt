@@ -10,7 +10,10 @@
 		copyToClipboard,
 		initMermaid,
 		renderMermaidDiagram,
-		renderVegaVisualization
+		renderVegaVisualization,
+		isMermaidData,
+		isPlotlyData,
+		renderPlotlyVisualization
 	} from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
@@ -376,9 +379,23 @@
 		return await renderMermaidDiagram(mermaid, code);
 	};
 
+	let plotlyHTML = null;
+
+	const isMermaidBlock = () => {
+		if (lang === 'mermaid') return true;
+		if (lang === '' && isMermaidData(code)) return true;
+		return false;
+	};
+
+	const isPlotlyBlock = () => {
+		if (lang === 'plotly') return true;
+		if ((lang === 'json' || lang === '') && isPlotlyData(code)) return true;
+		return false;
+	};
+
 	const render = async () => {
 		onUpdate(token);
-		if (lang === 'mermaid' && (token?.raw ?? '').slice(-4).includes('```')) {
+		if (isMermaidBlock() && (token?.raw ?? '').slice(-4).includes('```')) {
 			try {
 				renderHTML = await renderMermaid(code);
 			} catch (error) {
@@ -398,6 +415,15 @@
 				const errorMsg = error instanceof Error ? error.message : String(error);
 				renderError = $i18n.t('Failed to render visualization') + `: ${errorMsg}`;
 				renderHTML = null;
+			}
+		} else if (isPlotlyBlock() && (token?.raw ?? '').slice(-4).includes('```')) {
+			try {
+				plotlyHTML = renderPlotlyVisualization(code);
+			} catch (error) {
+				console.error('Failed to render Plotly chart:', error);
+				const errorMsg = error instanceof Error ? error.message : String(error);
+				renderError = $i18n.t('Failed to render visualization') + `: ${errorMsg}`;
+				plotlyHTML = null;
 			}
 		}
 	};
@@ -460,7 +486,28 @@
 		class="relative {className} flex flex-col rounded-2xl border border-gray-100/30 dark:border-gray-850/30 my-0.5"
 		dir="ltr"
 	>
-		{#if ['mermaid', 'vega', 'vega-lite'].includes(lang)}
+		{#if plotlyHTML}
+			<div class="rounded-2xl overflow-hidden">
+				<iframe
+					srcdoc={plotlyHTML}
+					class="w-full rounded-2xl border-0"
+					style="height: 500px;"
+					sandbox="allow-scripts"
+					title="Plotly Chart"
+				></iframe>
+			</div>
+		{:else if isPlotlyBlock() && !plotlyHTML}
+			<div class="p-3">
+				{#if renderError}
+					<div
+						class="flex gap-2.5 border px-4 py-3 border-red-600/10 bg-red-600/10 rounded-2xl mb-2"
+					>
+						{renderError}
+					</div>
+				{/if}
+				<pre>{code}</pre>
+			</div>
+		{:else if isMermaidBlock() || ['vega', 'vega-lite'].includes(lang)}
 			{#if renderHTML}
 				<SvgPanZoom
 					className=" rounded-2xl max-h-fit overflow-hidden"

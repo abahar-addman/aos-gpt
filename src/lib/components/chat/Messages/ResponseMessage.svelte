@@ -34,7 +34,8 @@
 		createMessagesList,
 		formatDate,
 		removeDetails,
-		removeAllDetails
+		removeAllDetails,
+		extractAgentActivity
 	} from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
@@ -159,6 +160,16 @@
 
 	let model = null;
 	$: model = $models.find((m) => m.id === message.model);
+
+	let agentActivities: { summary: string; content: string }[] = [];
+	let displayContent = '';
+	let agentActivityExpanded = false;
+
+	$: {
+		const extracted = extractAgentActivity(message.content || '');
+		agentActivities = extracted.activities;
+		displayContent = extracted.mainContent;
+	}
 
 	let edit = false;
 	let editedContent = '';
@@ -767,9 +778,87 @@
 							class="w-full flex flex-col relative {edit ? 'hidden' : ''}"
 							id="response-content-container"
 						>
-							{#if message.content === '' && !message.error && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
-								<Skeleton />
-							{:else if message.content && message.error !== true}
+							{#if agentActivities.length > 0}
+								<div class="mb-2">
+									<button
+										class="flex items-center gap-2 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition"
+										on:click={() => {
+											agentActivityExpanded = !agentActivityExpanded;
+										}}
+									>
+										<div class="flex items-center gap-1.5">
+											{#if !message?.done}
+												<span class="relative flex size-2">
+													<span
+														class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"
+													></span>
+													<span
+														class="relative inline-flex size-2 rounded-full bg-blue-500"
+													></span>
+												</span>
+											{/if}
+											<svg
+												class="size-3.5 transition-transform {agentActivityExpanded
+													? 'rotate-90'
+													: ''}"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M9 5l7 7-7 7"
+												/>
+											</svg>
+											<span>
+												{#if !message?.done}
+													Thinking...
+												{:else}
+													Thought process
+												{/if}
+											</span>
+										</div>
+									</button>
+
+									{#if agentActivityExpanded || !message?.done}
+										<div
+											class="mt-1.5 ml-1 pl-3 border-l-2 border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 max-h-64 overflow-y-auto"
+										>
+											{#each agentActivities as activity}
+												{#if activity.content}
+													<div class="prose prose-xs dark:prose-invert max-w-none opacity-75 markdown-prose">
+														<ContentRenderer
+															id={`${chatId}-${message.id}-activity`}
+															messageId={message.id}
+															{history}
+															{selectedModels}
+															content={activity.content}
+															floatingButtons={false}
+															save={false}
+															preview={false}
+															editCodeBlock={false}
+															done={true}
+															{model}
+															onTaskClick={() => {}}
+															onSourceClick={() => {}}
+															onAddMessages={() => {}}
+															onSave={() => {}}
+														/>
+													</div>
+												{/if}
+											{/each}
+										</div>
+									{/if}
+								</div>
+							{/if}
+
+							{#if !displayContent && !message.error && !message?.done && ((model?.info?.meta?.capabilities?.status_updates ?? true) ? (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0 || (message?.statusHistory?.at(-1)?.hidden ?? false) : true)}
+								{#if agentActivities.length === 0}
+									<Skeleton />
+								{/if}
+							{:else if displayContent && message.error !== true}
 								<!-- always show message contents even if there's an error -->
 								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 								<ContentRenderer
@@ -777,7 +866,7 @@
 									messageId={message.id}
 									{history}
 									{selectedModels}
-									content={message.content}
+									content={displayContent}
 									sources={message.sources}
 									floatingButtons={message?.done &&
 										!readOnly &&

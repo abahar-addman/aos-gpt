@@ -28,19 +28,28 @@ function parseAttributes(tag: string): { [key: string]: string } {
 
 function detailsTokenizer(src: string) {
 	// Updated regex to capture attributes inside <details>
-	const detailsRegex = /^<details(\s+[^>]*)?>\n/;
-	const summaryRegex = /^<summary>(.*?)<\/summary>\n/;
+	const detailsRegex = /^<details(\s+[^>]*)?>\s*\n?/;
+	const summaryRegex = /^<summary>(.*?)<\/summary>\s*\n?/;
 
 	const detailsMatch = detailsRegex.exec(src);
 	if (detailsMatch) {
-		const endIndex = findMatchingClosingTag(src, '<details', '</details>');
-		if (endIndex === -1) return;
+		let endIndex = findMatchingClosingTag(src, '<details', '</details>');
 
-		const fullMatch = src.slice(0, endIndex);
+		let fullMatch;
+		let contentEnd;
+		if (endIndex === -1) {
+			// Handle unclosed <details> (e.g. still streaming) — consume rest of src
+			fullMatch = src;
+			contentEnd = fullMatch.length;
+		} else {
+			fullMatch = src.slice(0, endIndex);
+			contentEnd = fullMatch.length - '</details>'.length;
+		}
+
 		const detailsTag = detailsMatch[0];
 		const attributes = parseAttributes(detailsTag); // Parse attributes from <details>
 
-		let content = fullMatch.slice(detailsTag.length, -10).trim(); // Remove <details> and </details>
+		let content = fullMatch.slice(detailsTag.length, contentEnd).trim();
 		let summary = '';
 
 		const summaryMatch = summaryRegex.exec(content);
@@ -60,7 +69,8 @@ function detailsTokenizer(src: string) {
 }
 
 function detailsStart(src: string) {
-	return src.match(/^<details>/) ? 0 : -1;
+	const match = src.match(/<details[\s>]/);
+	return match ? match.index : -1;
 }
 
 function detailsRenderer(token: any) {

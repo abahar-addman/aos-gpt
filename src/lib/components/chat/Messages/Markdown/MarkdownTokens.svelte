@@ -337,7 +337,7 @@
 		{:else if textContent.length > 0}
 			<Collapsible
 				title={token.summary}
-				open={$settings?.expandDetails ?? false}
+				open={token?.attributes?.open !== undefined ? true : ($settings?.expandDetails ?? false)}
 				attributes={token?.attributes}
 				className="w-full space-y-1"
 				dir="auto"
