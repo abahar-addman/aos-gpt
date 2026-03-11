@@ -10,6 +10,7 @@ from fastapi import (
     APIRouter,
 )
 import aiohttp
+import asyncio
 import os
 import logging
 import shutil
@@ -215,19 +216,26 @@ async def upload_pipeline(
 
     upload_folder = f"{CACHE_DIR}/pipelines"
     os.makedirs(upload_folder, exist_ok=True)
-    file_path = os.path.join(upload_folder, filename)
+    # Use .tmp extension to prevent uvicorn --reload from detecting the .py file
+    # and triggering a server restart that crashes the backend
+    file_path = os.path.join(upload_folder, f"{filename}.tmp")
 
-    response = None
     try:
         # Save the uploaded file locally (temp)
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        # Upload to Azure Blob Storage (pipeline container)
+        # Upload directly to Azure Blob Storage (pipeline container)
+        # NOTE: We intentionally avoid pipeline_storage.upload_file() here because
+        # AzureStorageProvider.upload_file() calls LocalStorageProvider.upload_file()
+        # which saves the .py file to data/uploads/, triggering uvicorn --reload
+        # and crashing the dev server.
         try:
             pipeline_storage = get_pipeline_storage_provider()
             with open(file_path, "rb") as f:
-                pipeline_storage.upload_file(f, filename, {})
+                contents = f.read()
+            blob_client = pipeline_storage.container_client.get_blob_client(filename)
+            blob_client.upload_blob(contents, overwrite=True)
             log.info(f"Pipeline file '{filename}' uploaded to Azure Blob Storage")
         except Exception as e:
             log.warning(f"Failed to upload pipeline to Azure Blob Storage: {e}")
@@ -237,44 +245,57 @@ async def upload_pipeline(
 
         headers = {"Authorization": f"Bearer {key}"}
 
-        async with aiohttp.ClientSession(trust_env=True) as session:
-            with open(file_path, "rb") as f:
-                form_data = aiohttp.FormData()
-                form_data.add_field(
-                    "file",
-                    f,
-                    filename=filename,
-                    content_type="application/octet-stream",
-                )
-
-                async with session.post(
-                    f"{url}/pipelines/upload",
-                    headers=headers,
-                    data=form_data,
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                ) as response:
-                    response.raise_for_status()
-                    data = await response.json()
-
-        return {**data}
-    except Exception as e:
-        # Handle connection error here
-        log.exception(f"Connection error: {e}")
-
         detail = None
-        status_code = status.HTTP_404_NOT_FOUND
-        if response is not None:
-            status_code = response.status
-            try:
-                res = await response.json()
-                if "detail" in res:
-                    detail = res["detail"]
-            except Exception:
-                pass
+        resp_status = None
+
+        timeout = aiohttp.ClientTimeout(total=30)
+        try:
+            async with aiohttp.ClientSession(
+                trust_env=True, timeout=timeout
+            ) as session:
+                with open(file_path, "rb") as f:
+                    form_data = aiohttp.FormData()
+                    form_data.add_field(
+                        "file",
+                        f,
+                        filename=filename,
+                        content_type="application/octet-stream",
+                    )
+
+                    async with session.post(
+                        f"{url}/pipelines/upload",
+                        headers=headers,
+                        data=form_data,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    ) as response:
+                        resp_status = response.status
+                        data = await response.json()
+                        if response.ok:
+                            return {**data}
+                        # Extract error detail while response is still open
+                        if "detail" in data:
+                            detail = data["detail"]
+        except aiohttp.ClientConnectionError as e:
+            log.warning(f"Pipeline server connection error: {e}")
+            detail = "Pipeline server is not reachable. Ensure the pipeline server is running."
+        except asyncio.TimeoutError:
+            log.warning("Pipeline server request timed out")
+            detail = "Pipeline server request timed out."
+        except Exception as e:
+            log.warning(f"Pipeline upload failed: {e}")
+            detail = f"Pipeline upload failed: {e}"
 
         raise HTTPException(
-            status_code=status_code,
-            detail=detail if detail else "Pipeline not found",
+            status_code=resp_status or status.HTTP_502_BAD_GATEWAY,
+            detail=detail or "Pipeline not found",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(f"Unexpected error during pipeline upload: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Pipeline upload error: {e}",
         )
     finally:
         # Ensure the file is deleted after the upload is completed or on failure
