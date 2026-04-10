@@ -1,0 +1,27 @@
+# Custom pipelines image with pre-installed dependencies
+# Required because gov-cloud environments may not have outbound internet
+# for runtime pip installs.
+FROM ghcr.io/open-webui/pipelines:main
+
+# Pre-install all pipeline dependencies so they're available offline
+RUN pip install --no-cache-dir \
+    langgraph \
+    langchain-core \
+    langchain-anthropic \
+    langchain-openai \
+    pandas \
+    numpy \
+    plotly \
+    redis \
+    pymongo
+
+# Install Azure SDK for blob storage sync (optional startup sync)
+RUN pip install --no-cache-dir \
+    azure-storage-blob \
+    azure-identity
+
+# Copy the startup script that syncs pipelines from Azure before starting
+COPY docker/pipelines-entrypoint.sh /app/pipelines-entrypoint.sh
+RUN chmod +x /app/pipelines-entrypoint.sh
+
+ENTRYPOINT ["/app/pipelines-entrypoint.sh"]

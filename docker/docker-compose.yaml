@@ -3,7 +3,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: dockerdude63/aos-gpt:latest
+    image: addmangroup/aos-gpt:latest
     container_name: aos-gpt
     volumes:
       - aos-gpt:/app/backend/data
@@ -23,12 +23,17 @@ services:
     restart: unless-stopped
 
   pipelines:
-    image: ghcr.io/open-webui/pipelines:main
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.pipelines
+    image: addmangroup/aos-pipelines:latest
     volumes:
       - pipelines:/app/pipelines
     restart: unless-stopped
     ports:
       - ${PIPELINES_PORT-9099}:9099
+    env_file:
+      - ../.env
     environment:
       - PIPELINES_API_KEY=0p3n-w3bu!
 

@@ -11,7 +11,6 @@ const packages = [
 	'regex',
 	'sympy',
 	'tiktoken',
-	'seaborn',
 	'pytz',
 	'black',
 	'openai'
@@ -86,14 +85,18 @@ async function downloadPackages() {
 		const micropip = pyodide.pyimport('micropip');
 		console.log('Downloading Pyodide packages:', packages);
 
-		try {
-			for (const pkg of packages) {
+		const failed = [];
+		for (const pkg of packages) {
+			try {
 				console.log(`Installing package: ${pkg}`);
 				await micropip.install(pkg);
+			} catch (err) {
+				console.warn(`Warning: failed to install ${pkg}, skipping:`, err.message || err);
+				failed.push(pkg);
 			}
-		} catch (err) {
-			console.error('Package installation failed:', err);
-			return;
+		}
+		if (failed.length > 0) {
+			console.warn(`Packages that failed to pre-cache (will load on-demand): ${failed.join(', ')}`);
 		}
 
 		console.log('Pyodide packages downloaded, freezing into lock file');
