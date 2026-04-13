@@ -183,6 +183,14 @@
 		}
 
 		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'olm_ocr' &&
+			(!RAGConfig.OLM_OCR_API_BASE_URL || RAGConfig.OLM_OCR_API_BASE_URL.trim() === '')
+		) {
+			toast.error($i18n.t('OLM OCR API Base URL required.'));
+			return;
+		}
+
+		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru' &&
 			RAGConfig.MINERU_API_MODE === 'cloud' &&
 			RAGConfig.MINERU_API_KEY === ''
@@ -346,6 +354,7 @@
 									<option value="datalab_marker">{$i18n.t('Datalab Marker API')}</option>
 									<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
 									<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
+									<option value="olm_ocr">{$i18n.t('OLM OCR (Ollama)')}</option>
 									<option value="mineru">{$i18n.t('MinerU')}</option>
 								</select>
 							</div>
@@ -645,6 +654,21 @@
 								<SensitiveInput
 									placeholder={$i18n.t('Enter Mistral API Key')}
 									bind:value={RAGConfig.MISTRAL_OCR_API_KEY}
+								/>
+							</div>
+						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'olm_ocr'}
+							<div class="my-0.5 flex gap-2 pr-2">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter Ollama API Base URL')}
+									bind:value={RAGConfig.OLM_OCR_API_BASE_URL}
+								/>
+							</div>
+							<div class="my-0.5 flex gap-2 pr-2">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter OLM OCR Model Name')}
+									bind:value={RAGConfig.OLM_OCR_MODEL}
 								/>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru'}

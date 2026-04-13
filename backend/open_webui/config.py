@@ -2772,6 +2772,18 @@ MISTRAL_OCR_API_KEY = PersistentConfig(
     os.getenv("MISTRAL_OCR_API_KEY", ""),
 )
 
+OLM_OCR_API_BASE_URL = PersistentConfig(
+    "OLM_OCR_API_BASE_URL",
+    "rag.OLM_OCR_API_BASE_URL",
+    os.getenv("OLM_OCR_API_BASE_URL", OLLAMA_BASE_URL),
+)
+
+OLM_OCR_MODEL = PersistentConfig(
+    "OLM_OCR_MODEL",
+    "rag.OLM_OCR_MODEL",
+    os.getenv("OLM_OCR_MODEL", "richardyoung/olmocr2:7b-q8"),
+)
+
 BYPASS_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
     "BYPASS_EMBEDDING_AND_RETRIEVAL",
     "rag.bypass_embedding_and_retrieval",

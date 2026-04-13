@@ -26,6 +26,7 @@ from langchain_core.documents import Document
 from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
 
 from open_webui.retrieval.loaders.mistral import MistralLoader
+from open_webui.retrieval.loaders.olmocr import OlmOCRLoader
 from open_webui.retrieval.loaders.datalab_marker import DatalabMarkerLoader
 from open_webui.retrieval.loaders.mineru import MinerULoader
 
@@ -356,6 +357,12 @@ class Loader:
             loader = MistralLoader(
                 base_url=self.kwargs.get("MISTRAL_OCR_API_BASE_URL"),
                 api_key=self.kwargs.get("MISTRAL_OCR_API_KEY"),
+                file_path=file_path,
+            )
+        elif self.engine == "olm_ocr" and file_ext in ["pdf"]:
+            loader = OlmOCRLoader(
+                base_url=self.kwargs.get("OLM_OCR_API_BASE_URL"),
+                model=self.kwargs.get("OLM_OCR_MODEL"),
                 file_path=file_path,
             )
         else:
