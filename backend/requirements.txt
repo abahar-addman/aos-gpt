@@ -154,4 +154,7 @@ opentelemetry-instrumentation-logging==0.60b1
 opentelemetry-instrumentation-httpx==0.60b1
 opentelemetry-instrumentation-aiohttp-client==0.60b1
 
+## Datadog APM (used via ddtrace-run wrapper in start.sh)
+ddtrace
+
 langgraph>=0.2.0

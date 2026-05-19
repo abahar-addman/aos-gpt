@@ -555,12 +555,12 @@ from open_webui.utils.redis import get_sentinels_from_env
 
 from open_webui.constants import ERROR_MESSAGES
 
-if SAFE_MODE:
-    print("SAFE MODE ENABLED")
-    Functions.deactivate_all_functions()
-
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
+
+if SAFE_MODE:
+    log.warning("SAFE MODE ENABLED")
+    Functions.deactivate_all_functions()
 
 
 class SPAStaticFiles(StaticFiles):
@@ -1823,7 +1823,7 @@ async def chat_completion(
 
             return await process_chat_response(response, ctx)
         except asyncio.CancelledError:
-            log.info("Chat processing was cancelled")
+            log.debug("Chat processing was cancelled")
             try:
                 event_emitter = get_event_emitter(metadata)
                 await asyncio.shield(

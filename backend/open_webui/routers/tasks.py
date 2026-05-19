@@ -491,7 +491,7 @@ async def generate_queries(
             )
 
     if getattr(request.state, "cached_queries", None):
-        log.info(f"Reusing cached queries: {request.state.cached_queries}")
+        log.debug(f"Reusing cached queries: {request.state.cached_queries}")
         return request.state.cached_queries
 
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):

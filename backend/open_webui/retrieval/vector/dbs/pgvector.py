@@ -184,13 +184,13 @@ class PgvectorClient(VectorDBBase):
     def _vector_index_configuration(self) -> Tuple[str, str]:
         if PGVECTOR_INDEX_METHOD:
             index_method = PGVECTOR_INDEX_METHOD
-            log.info(
+            log.debug(
                 "Using vector index method '%s' from PGVECTOR_INDEX_METHOD.",
                 index_method,
             )
         elif USE_HALFVEC:
             index_method = "hnsw"
-            log.info(
+            log.debug(
                 "VECTOR_LENGTH=%s exceeds 2000; using halfvec column type with hnsw index.",
                 VECTOR_LENGTH,
             )
@@ -234,7 +234,7 @@ class PgvectorClient(VectorDBBase):
             if index_options:
                 index_sql = f"{index_sql} {index_options}"
             self.session.execute(text(index_sql))
-            log.info(
+            log.debug(
                 "Ensured vector index '%s' using %s%s.",
                 index_name,
                 index_method,
@@ -319,7 +319,7 @@ class PgvectorClient(VectorDBBase):
                         },
                     )
                 self.session.commit()
-                log.info(f"Encrypted & inserted {len(items)} into '{collection_name}'")
+                log.debug(f"Encrypted & inserted {len(items)} into '{collection_name}'")
 
             else:
                 new_items = []
@@ -335,7 +335,7 @@ class PgvectorClient(VectorDBBase):
                     new_items.append(new_chunk)
                 self.session.bulk_save_objects(new_items)
                 self.session.commit()
-                log.info(
+                log.debug(
                     f"Inserted {len(new_items)} items into collection '{collection_name}'."
                 )
         except Exception as e:
@@ -374,7 +374,7 @@ class PgvectorClient(VectorDBBase):
                         },
                     )
                 self.session.commit()
-                log.info(f"Encrypted & upserted {len(items)} into '{collection_name}'")
+                log.debug(f"Encrypted & upserted {len(items)} into '{collection_name}'")
             else:
                 for item in items:
                     vector = self.adjust_vector_length(item["vector"])
@@ -400,7 +400,7 @@ class PgvectorClient(VectorDBBase):
                         )
                         self.session.add(new_chunk)
                 self.session.commit()
-                log.info(
+                log.debug(
                     f"Upserted {len(items)} items into collection '{collection_name}'."
                 )
         except Exception as e:
@@ -697,7 +697,7 @@ class PgvectorClient(VectorDBBase):
                         )
                 deleted = query.delete(synchronize_session=False)
             self.session.commit()
-            log.info(f"Deleted {deleted} items from collection '{collection_name}'.")
+            log.debug(f"Deleted {deleted} items from collection '{collection_name}'.")
         except Exception as e:
             self.session.rollback()
             log.exception(f"Error during delete: {e}")
@@ -707,7 +707,7 @@ class PgvectorClient(VectorDBBase):
         try:
             deleted = self.session.query(DocumentChunk).delete()
             self.session.commit()
-            log.info(
+            log.debug(
                 f"Reset complete. Deleted {deleted} items from 'document_chunk' table."
             )
         except Exception as e:

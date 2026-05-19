@@ -127,18 +127,18 @@ class MilvusClient(VectorDBBase):
                 "M": MILVUS_HNSW_M,
                 "efConstruction": MILVUS_HNSW_EFCONSTRUCTION,
             }
-            log.info(f"HNSW params: {index_creation_params}")
+            log.debug(f"HNSW params: {index_creation_params}")
         elif index_type == "IVF_FLAT":
             index_creation_params = {"nlist": MILVUS_IVF_FLAT_NLIST}
-            log.info(f"IVF_FLAT params: {index_creation_params}")
+            log.debug(f"IVF_FLAT params: {index_creation_params}")
         elif index_type == "DISKANN":
             index_creation_params = {
                 "max_degree": MILVUS_DISKANN_MAX_DEGREE,
                 "search_list_size": MILVUS_DISKANN_SEARCH_LIST_SIZE,
             }
-            log.info(f"DISKANN params: {index_creation_params}")
+            log.debug(f"DISKANN params: {index_creation_params}")
         elif index_type in ["FLAT", "AUTOINDEX"]:
-            log.info(f"Using {index_type} index with no specific build-time params.")
+            log.debug(f"Using {index_type} index with no specific build-time params.")
         else:
             log.warning(
                 f"Unsupported MILVUS_INDEX_TYPE: '{index_type}'. "
@@ -160,7 +160,7 @@ class MilvusClient(VectorDBBase):
             schema=schema,
             index_params=index_params,
         )
-        log.info(
+        log.debug(
             f"Successfully created collection '{self.collection_prefix}_{collection_name}' with index type '{index_type}' and metric '{metric_type}'."
         )
 
@@ -222,7 +222,7 @@ class MilvusClient(VectorDBBase):
         collection.load()
 
         try:
-            log.info(
+            log.debug(
                 f"Querying collection {self.collection_prefix}_{collection_name} with filter: '{filter_string}', limit: {limit}"
             )
 
@@ -269,7 +269,7 @@ class MilvusClient(VectorDBBase):
         if not self.client.has_collection(
             collection_name=f"{self.collection_prefix}_{collection_name}"
         ):
-            log.info(
+            log.debug(
                 f"Collection {self.collection_prefix}_{collection_name} does not exist. Creating now."
             )
             if not items:
@@ -283,7 +283,7 @@ class MilvusClient(VectorDBBase):
                 collection_name=collection_name, dimension=len(items[0]["vector"])
             )
 
-        log.info(
+        log.debug(
             f"Inserting {len(items)} items into collection {self.collection_prefix}_{collection_name}."
         )
         return self.client.insert(
@@ -305,7 +305,7 @@ class MilvusClient(VectorDBBase):
         if not self.client.has_collection(
             collection_name=f"{self.collection_prefix}_{collection_name}"
         ):
-            log.info(
+            log.debug(
                 f"Collection {self.collection_prefix}_{collection_name} does not exist for upsert. Creating now."
             )
             if not items:
@@ -319,7 +319,7 @@ class MilvusClient(VectorDBBase):
                 collection_name=collection_name, dimension=len(items[0]["vector"])
             )
 
-        log.info(
+        log.debug(
             f"Upserting {len(items)} items into collection {self.collection_prefix}_{collection_name}."
         )
         return self.client.upsert(
@@ -350,7 +350,7 @@ class MilvusClient(VectorDBBase):
             return None
 
         if ids:
-            log.info(
+            log.debug(
                 f"Deleting items by IDs from {self.collection_prefix}_{collection_name}. IDs: {ids}"
             )
             return self.client.delete(
@@ -364,7 +364,7 @@ class MilvusClient(VectorDBBase):
                     for key, value in filter.items()
                 ]
             )
-            log.info(
+            log.debug(
                 f"Deleting items by filter from {self.collection_prefix}_{collection_name}. Filter: {filter_string}"
             )
             return self.client.delete(

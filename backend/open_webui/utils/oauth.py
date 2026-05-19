@@ -722,7 +722,7 @@ class OAuthClientManager:
                 session = OAuthSessions.update_session_by_id(
                     session.id, refreshed_token
                 )
-                log.info(f"Successfully refreshed token for session {session.id}")
+                log.debug(f"Successfully refreshed token for session {session.id}")
                 return session.token
             else:
                 log.error(f"Failed to refresh token for session {session.id}")
@@ -1016,7 +1016,7 @@ class OAuthManager:
                 session = OAuthSessions.update_session_by_id(
                     session.id, refreshed_token
                 )
-                log.info(f"Successfully refreshed token for session {session.id}")
+                log.debug(f"Successfully refreshed token for session {session.id}")
                 return session.token
             else:
                 log.error(f"Failed to refresh token for session {session.id}")

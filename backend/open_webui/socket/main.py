@@ -541,7 +541,7 @@ async def ydoc_document_join(sid, data):
         user_name = data.get("user_name", "Anonymous")
         user_color = data.get("user_color", "#000000")
 
-        log.info(f"User {user_id} joining document {document_id}")
+        log.debug(f"User {user_id} joining document {document_id}")
         await YDOC_MANAGER.add_user(document_id=document_id, user_id=sid)
 
         # Join Socket.IO room
@@ -580,7 +580,7 @@ async def ydoc_document_join(sid, data):
             skip_sid=sid,
         )
 
-        log.info(f"User {user_id} successfully joined document {document_id}")
+        log.debug(f"User {user_id} successfully joined document {document_id}")
 
     except Exception as e:
         log.error(f"Error in yjs_document_join: {e}")
@@ -703,7 +703,7 @@ async def yjs_document_leave(sid, data):
         document_id = data["document_id"]
         user_id = data.get("user_id", sid)
 
-        log.info(f"User {user_id} leaving document {document_id}")
+        log.debug(f"User {user_id} leaving document {document_id}")
 
         # Remove user from the document
         await YDOC_MANAGER.remove_user(document_id=document_id, user_id=sid)
@@ -722,7 +722,7 @@ async def yjs_document_leave(sid, data):
             await YDOC_MANAGER.document_exists(document_id)
             and len(await YDOC_MANAGER.get_users(document_id)) == 0
         ):
-            log.info(f"Cleaning up document {document_id} as no users are left")
+            log.debug(f"Cleaning up document {document_id} as no users are left")
             await YDOC_MANAGER.clear_document(document_id)
 
     except Exception as e:

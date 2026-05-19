@@ -240,7 +240,7 @@ class MistralLoader:
         Although streaming is not enabled for this endpoint, the file is opened
         in a context manager to minimize memory usage duration.
         """
-        log.info("Uploading file to Mistral API")
+        log.debug("Uploading file to Mistral API")
         url = f"{self.base_url}/files"
 
         def upload_request():
@@ -268,7 +268,7 @@ class MistralLoader:
             file_id = response_data.get("id")
             if not file_id:
                 raise ValueError("File ID not found in upload response.")
-            log.info(f"File uploaded successfully. File ID: {file_id}")
+            log.debug(f"File uploaded successfully. File ID: {file_id}")
             return file_id
         except Exception as e:
             log.error(f"Failed to upload file: {e}")
@@ -316,12 +316,12 @@ class MistralLoader:
         if not file_id:
             raise ValueError("File ID not found in upload response.")
 
-        log.info(f"File uploaded successfully. File ID: {file_id}")
+        log.debug(f"File uploaded successfully. File ID: {file_id}")
         return file_id
 
     def _get_signed_url(self, file_id: str) -> str:
         """Retrieves a temporary signed URL for the uploaded file (sync version)."""
-        log.info(f"Getting signed URL for file ID: {file_id}")
+        log.debug(f"Getting signed URL for file ID: {file_id}")
         url = f"{self.base_url}/files/{file_id}/url"
         params = {"expiry": 1}
         signed_url_headers = {**self.headers, "Accept": "application/json"}
@@ -337,7 +337,7 @@ class MistralLoader:
             signed_url = response_data.get("url")
             if not signed_url:
                 raise ValueError("Signed URL not found in response.")
-            log.info("Signed URL received.")
+            log.debug("Signed URL received.")
             return signed_url
         except Exception as e:
             log.error(f"Failed to get signed URL: {e}")
@@ -373,7 +373,7 @@ class MistralLoader:
 
     def _process_ocr(self, signed_url: str) -> Dict[str, Any]:
         """Sends the signed URL to the OCR endpoint for processing (sync version)."""
-        log.info("Processing OCR via Mistral API")
+        log.debug("Processing OCR via Mistral API")
         url = f"{self.base_url}/ocr"
         ocr_headers = {
             **self.headers,
@@ -397,7 +397,7 @@ class MistralLoader:
 
         try:
             ocr_response = self._retry_request_sync(ocr_request)
-            log.info("OCR processing done.")
+            log.debug("OCR processing done.")
             self._debug_log("OCR response: %s", ocr_response)
             return ocr_response
         except Exception as e:
@@ -426,7 +426,7 @@ class MistralLoader:
         }
 
         async def ocr_request():
-            log.info("Starting OCR processing via Mistral API")
+            log.debug("Starting OCR processing via Mistral API")
             start_time = time.time()
 
             async with session.post(
@@ -438,7 +438,7 @@ class MistralLoader:
                 ocr_response = await self._handle_response_async(response)
 
             processing_time = time.time() - start_time
-            log.info(f"OCR processing completed in {processing_time:.2f}s")
+            log.debug(f"OCR processing completed in {processing_time:.2f}s")
 
             return ocr_response
 
@@ -446,7 +446,7 @@ class MistralLoader:
 
     def _delete_file(self, file_id: str) -> None:
         """Deletes the file from Mistral storage (sync version)."""
-        log.info(f"Deleting uploaded file ID: {file_id}")
+        log.debug(f"Deleting uploaded file ID: {file_id}")
         url = f"{self.base_url}/files/{file_id}"
 
         try:
@@ -454,7 +454,7 @@ class MistralLoader:
                 url, headers=self.headers, timeout=self.cleanup_timeout
             )
             delete_response = self._handle_response(response)
-            log.info(f"File deleted successfully: {delete_response}")
+            log.debug(f"File deleted successfully: {delete_response}")
         except Exception as e:
             # Log error but don't necessarily halt execution if deletion fails
             log.error(f"Failed to delete file ID {file_id}: {e}")
@@ -568,7 +568,7 @@ class MistralLoader:
             )
 
         if skipped_pages > 0:
-            log.info(
+            log.debug(
                 f"Processed {len(documents)} pages, skipped {skipped_pages} empty/invalid pages"
             )
 
@@ -615,7 +615,7 @@ class MistralLoader:
             documents = self._process_results(ocr_response)
 
             total_time = time.time() - start_time
-            log.info(
+            log.debug(
                 f"Sync OCR workflow completed in {total_time:.2f}s, produced {len(documents)} documents"
             )
 
@@ -672,7 +672,7 @@ class MistralLoader:
                 documents = self._process_results(ocr_response)
 
                 total_time = time.time() - start_time
-                log.info(
+                log.debug(
                     f"Async OCR workflow completed in {total_time:.2f}s, produced {len(documents)} documents"
                 )
 
@@ -717,7 +717,7 @@ class MistralLoader:
         if not loaders:
             return []
 
-        log.info(
+        log.debug(
             f"Starting concurrent processing of {len(loaders)} files with max {max_concurrent} concurrent"
         )
         start_time = time.time()
@@ -760,7 +760,7 @@ class MistralLoader:
         )
         failure_count = len(results) - success_count
 
-        log.info(
+        log.debug(
             f"Batch processing completed in {total_time:.2f}s: "
             f"{success_count} files succeeded, {failure_count} files failed, "
             f"produced {total_docs} total documents"

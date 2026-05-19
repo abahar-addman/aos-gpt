@@ -189,7 +189,7 @@ class OpenGaussClient(VectorDBBase):
                 new_items.append(new_chunk)
             self.session.bulk_save_objects(new_items)
             self.session.commit()
-            log.info(
+            log.debug(
                 f"Inserting {len(new_items)} items into collection '{collection_name}'."
             )
         except Exception as e:
@@ -221,7 +221,7 @@ class OpenGaussClient(VectorDBBase):
                     )
                     self.session.add(new_chunk)
             self.session.commit()
-            log.info(
+            log.debug(
                 f"Inserting/updating {len(items)} items in collection '{collection_name}'."
             )
         except Exception as e:
@@ -388,7 +388,7 @@ class OpenGaussClient(VectorDBBase):
                     )
             deleted = query.delete(synchronize_session=False)
             self.session.commit()
-            log.info(f"Deleted {deleted} items from collection '{collection_name}'")
+            log.debug(f"Deleted {deleted} items from collection '{collection_name}'")
         except Exception as e:
             self.session.rollback()
             log.exception(f"Failed to delete data: {e}")

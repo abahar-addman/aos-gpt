@@ -27,7 +27,9 @@
       "Bash(C:/Users/ali.bahar/Documents/GitHub/aos-gpt/backend/venv/Scripts/python.exe -m pip install:*)",
       "Bash(cd:*)",
       "Bash(head:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(bash -n docker/pipelines-entrypoint.sh)",
+      "Bash(bash -n backend/start.sh)"
     ]
   }
 }

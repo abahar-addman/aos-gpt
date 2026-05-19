@@ -23,7 +23,7 @@ def search_ollama_cloud(
         count (int): Number of results to return
         filter_list (Optional[list[str]]): List of domains to filter results by
     """
-    log.info(f"Searching with Ollama for query: {query}")
+    log.debug(f"Searching with Ollama for query: {query}")
 
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     payload = {"query": query, "max_results": count}
@@ -34,7 +34,7 @@ def search_ollama_cloud(
         data = response.json()
 
         results = data.get("results", [])
-        log.info(f"Found {len(results)} results")
+        log.debug(f"Found {len(results)} results")
 
         if filter_list:
             results = get_filtered_results(results, filter_list)

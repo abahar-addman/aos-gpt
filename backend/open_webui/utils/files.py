@@ -1,3 +1,5 @@
+import logging
+
 from open_webui.routers.images import (
     get_image_data,
     upload_image,
@@ -26,6 +28,8 @@ import io
 import re
 
 import requests
+
+log = logging.getLogger(__name__)
 
 BASE64_IMAGE_URL_PREFIX = re.compile(r"data:image/\w+;base64,", re.IGNORECASE)
 MARKDOWN_IMAGE_URL_PATTERN = re.compile(r"!\[(.*?)\]\((.+?)\)", re.IGNORECASE)
@@ -108,7 +112,7 @@ def load_b64_audio_data(b64_str):
         )
         return audio_data, content_type
     except Exception as e:
-        print(f"Error decoding base64 audio data: {e}")
+        log.exception("Error decoding base64 audio data")
         return None, None
 
 

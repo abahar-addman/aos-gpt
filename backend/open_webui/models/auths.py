@@ -99,7 +99,7 @@ class AuthsTable:
         db: Optional[Session] = None,
     ) -> Optional[UserModel]:
         with get_db_context(db) as db:
-            log.info("insert_new_auth")
+            log.debug("insert_new_auth")
 
             id = str(uuid.uuid4())
 
@@ -124,7 +124,7 @@ class AuthsTable:
     def authenticate_user(
         self, email: str, verify_password: callable, db: Optional[Session] = None
     ) -> Optional[UserModel]:
-        log.info(f"authenticate_user: {email}")
+        log.debug(f"authenticate_user: {email}")
 
         user = Users.get_user_by_email(email, db=db)
         if not user:
@@ -146,7 +146,10 @@ class AuthsTable:
     def authenticate_user_by_api_key(
         self, api_key: str, db: Optional[Session] = None
     ) -> Optional[UserModel]:
-        log.info(f"authenticate_user_by_api_key: {api_key}")
+        log.debug(
+            "authenticate_user_by_api_key: %s",
+            f"{api_key[:6]}..." if api_key else "<empty>",
+        )
         # if no api_key, return None
         if not api_key:
             return None
@@ -160,7 +163,7 @@ class AuthsTable:
     def authenticate_user_by_email(
         self, email: str, db: Optional[Session] = None
     ) -> Optional[UserModel]:
-        log.info(f"authenticate_user_by_email: {email}")
+        log.debug(f"authenticate_user_by_email: {email}")
         try:
             with get_db_context(db) as db:
                 # Single JOIN query instead of two separate queries

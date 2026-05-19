@@ -918,7 +918,7 @@ async def delete_knowledge_by_id(
 
     # Get all models
     models = Models.get_all_models(db=db)
-    log.info(f"Found {len(models)} models to check for knowledge base {id}")
+    log.debug(f"Found {len(models)} models to check for knowledge base {id}")
 
     # Update models that reference this knowledge base
     for model in models:
@@ -929,7 +929,7 @@ async def delete_knowledge_by_id(
 
             # If the knowledge list changed, update the model
             if len(updated_knowledge) != len(knowledge_list):
-                log.info(f"Updating model {model.id} to remove knowledge base {id}")
+                log.debug(f"Updating model {model.id} to remove knowledge base {id}")
                 model.meta.knowledge = updated_knowledge
                 # Create a ModelForm for the update
                 model_form = ModelForm(
@@ -1039,7 +1039,7 @@ async def add_files_to_knowledge_batch(
         )
 
     # Batch-fetch all files to avoid N+1 queries
-    log.info(f"files/batch/add - {len(form_data)} files")
+    log.debug(f"files/batch/add - {len(form_data)} files")
     file_ids = [form.file_id for form in form_data]
     files = Files.get_files_by_ids(file_ids, db=db)
 

@@ -166,7 +166,7 @@ def process_uploaded_file(
                         f"File type {file.content_type} is not supported for processing"
                     )
             else:
-                log.info(
+                log.warning(
                     f"File type {file.content_type} is not provided, but trying to process anyway"
                 )
                 process_file(
@@ -227,7 +227,7 @@ def upload_file_handler(
     background_tasks: Optional[BackgroundTasks] = None,
     db: Optional[Session] = None,
 ):
-    log.info(f"file.content_type: {file.content_type} {process}")
+    log.debug(f"file.content_type: {file.content_type} {process}")
 
     if isinstance(metadata, str):
         try:
@@ -733,7 +733,7 @@ async def get_html_file_content_by_id(
 
             # Check if the file already exists in the cache
             if file_path.is_file():
-                log.info(f"file_path: {file_path}")
+                log.debug(f"file_path: {file_path}")
                 return FileResponse(file_path)
             else:
                 raise HTTPException(

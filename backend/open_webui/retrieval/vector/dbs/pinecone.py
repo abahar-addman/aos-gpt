@@ -252,7 +252,7 @@ class PineconeClient(VectorDBBase):
         )
         try:
             self.index.delete(filter={"collection_name": collection_name_with_prefix})
-            log.info(
+            log.debug(
                 f"Collection '{collection_name_with_prefix}' deleted (all vectors removed)."
             )
         except Exception as e:
@@ -288,7 +288,7 @@ class PineconeClient(VectorDBBase):
                 raise
         elapsed = time.time() - start_time
         log.debug(f"Insert of {len(points)} vectors took {elapsed:.2f} seconds")
-        log.info(
+        log.debug(
             f"Successfully inserted {len(points)} vectors in parallel batches "
             f"into '{collection_name_with_prefix}'"
         )
@@ -320,7 +320,7 @@ class PineconeClient(VectorDBBase):
                 raise
         elapsed = time.time() - start_time
         log.debug(f"Upsert of {len(points)} vectors took {elapsed:.2f} seconds")
-        log.info(
+        log.debug(
             f"Successfully upserted {len(points)} vectors in parallel batches "
             f"into '{collection_name_with_prefix}'"
         )
@@ -352,7 +352,7 @@ class PineconeClient(VectorDBBase):
             if isinstance(result, Exception):
                 log.error(f"Error in async insert batch: {result}")
                 raise result
-        log.info(
+        log.debug(
             f"Successfully async inserted {len(points)} vectors in batches "
             f"into '{collection_name_with_prefix}'"
         )
@@ -384,7 +384,7 @@ class PineconeClient(VectorDBBase):
             if isinstance(result, Exception):
                 log.error(f"Error in async upsert batch: {result}")
                 raise result
-        log.info(
+        log.debug(
             f"Successfully async upserted {len(points)} vectors in batches "
             f"into '{collection_name_with_prefix}'"
         )
@@ -534,7 +534,7 @@ class PineconeClient(VectorDBBase):
                         f"Deleted batch of {len(batch_ids)} vectors by ID "
                         f"from '{collection_name_with_prefix}'"
                     )
-                log.info(
+                log.debug(
                     f"Successfully deleted {len(ids)} vectors by ID "
                     f"from '{collection_name_with_prefix}'"
                 )
@@ -546,7 +546,7 @@ class PineconeClient(VectorDBBase):
                     pinecone_filter.update(filter)
                 # Delete by metadata filter
                 self.index.delete(filter=pinecone_filter)
-                log.info(
+                log.debug(
                     f"Successfully deleted vectors by filter from '{collection_name_with_prefix}'"
                 )
 

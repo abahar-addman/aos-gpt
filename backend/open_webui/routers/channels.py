@@ -1153,7 +1153,7 @@ async def model_response_handler(request, channel, message, user, db=None):
                             db,
                         )
             except Exception as e:
-                log.info(e)
+                log.warning("Channel notification post failed: %s", e)
                 pass
 
     return True

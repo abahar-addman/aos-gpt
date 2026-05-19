@@ -146,7 +146,7 @@ class YoutubeLoader:
                 log.debug(f"No transcript found for language '{lang}'")
                 continue
             except Exception as e:
-                log.info(f"Error finding transcript for language '{lang}'")
+                log.warning(f"Error finding transcript for language '{lang}'")
                 raise e
 
         # If we get here, all languages failed

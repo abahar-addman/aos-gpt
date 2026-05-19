@@ -78,6 +78,19 @@ if GLOBAL_LOG_LEVEL in logging.getLevelNamesMapping():
 else:
     GLOBAL_LOG_LEVEL = "INFO"
 
+# Stdout log format. "json" emits one JSON object per line so Datadog can parse
+# attributes natively; "text" keeps the human-readable colored format for local dev.
+LOG_FORMAT = os.environ.get("LOG_FORMAT", "text").lower()
+if LOG_FORMAT not in ("text", "json"):
+    LOG_FORMAT = "text"
+
+# Datadog Unified Service Tagging. These are read by ddtrace automatically and
+# we also stamp them onto every log line so service/env/version facets work in
+# the Datadog Logs UI even when running without the tracer.
+DD_SERVICE = os.environ.get("DD_SERVICE", "aos-gpt")
+DD_ENV = os.environ.get("DD_ENV", os.environ.get("ENV", "dev"))
+DD_VERSION = os.environ.get("DD_VERSION", "")
+
 log = logging.getLogger(__name__)
 log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
 
@@ -439,7 +452,7 @@ try:
         UVICORN_WORKERS = 1
 except ValueError:
     UVICORN_WORKERS = 1
-    log.info(f"Invalid UVICORN_WORKERS value, defaulting to {UVICORN_WORKERS}")
+    log.warning(f"Invalid UVICORN_WORKERS value, defaulting to {UVICORN_WORKERS}")
 
 ####################################
 # WEBUI_AUTH (Required for security)

@@ -73,7 +73,7 @@ class MinerULoader:
         Load document using Local API (synchronous).
         Posts file to /file_parse endpoint and gets immediate response.
         """
-        log.info(f"Using MinerU Local API at {self.api_url}")
+        log.debug(f"Using MinerU Local API at {self.api_url}")
 
         filename = os.path.basename(self.file_path)
 
@@ -96,7 +96,7 @@ class MinerULoader:
             with open(self.file_path, "rb") as f:
                 files = {"files": (filename, f, "application/octet-stream")}
 
-                log.info(f"Sending file to MinerU Local API: {filename}")
+                log.debug(f"Sending file to MinerU Local API: {filename}")
                 log.debug(f"Local API parameters: {form_data}")
 
                 response = requests.post(
@@ -164,7 +164,7 @@ class MinerULoader:
                 detail="MinerU returned empty markdown content",
             )
 
-        log.info(f"Successfully parsed document with MinerU Local API: {filename}")
+        log.debug(f"Successfully parsed document with MinerU Local API: {filename}")
 
         # Create metadata
         metadata = {
@@ -181,7 +181,7 @@ class MinerULoader:
         Load document using Cloud API (asynchronous).
         Uses batch upload endpoint to avoid need for public file URLs.
         """
-        log.info(f"Using MinerU Cloud API at {self.api_url}")
+        log.debug(f"Using MinerU Cloud API at {self.api_url}")
 
         filename = os.path.basename(self.file_path)
 
@@ -199,7 +199,7 @@ class MinerULoader:
             result["full_zip_url"], filename
         )
 
-        log.info(f"Successfully parsed document with MinerU Cloud API: {filename}")
+        log.debug(f"Successfully parsed document with MinerU Cloud API: {filename}")
 
         # Create metadata
         metadata = {
@@ -235,7 +235,7 @@ class MinerULoader:
         if self.page_ranges:
             request_body["files"][0]["page_ranges"] = self.page_ranges
 
-        log.info(f"Requesting upload URL for: {filename}")
+        log.debug(f"Requesting upload URL for: {filename}")
         log.debug(f"Cloud API request body: {request_body}")
 
         try:
@@ -287,7 +287,7 @@ class MinerULoader:
             )
 
         upload_url = file_urls[0]
-        log.info(f"Received upload URL for batch: {batch_id}")
+        log.debug(f"Received upload URL for batch: {batch_id}")
 
         return batch_id, upload_url
 
@@ -295,7 +295,7 @@ class MinerULoader:
         """
         Upload file to presigned URL (no authentication needed).
         """
-        log.info(f"Uploading file to presigned URL")
+        log.debug(f"Uploading file to presigned URL")
 
         try:
             with open(self.file_path, "rb") as f:
@@ -325,7 +325,7 @@ class MinerULoader:
                 detail=f"Error uploading file: {str(e)}",
             )
 
-        log.info("File uploaded successfully")
+        log.debug("File uploaded successfully")
 
     def _poll_batch_status(self, batch_id: str, filename: str) -> dict:
         """
@@ -339,7 +339,7 @@ class MinerULoader:
         max_iterations = 300  # 10 minutes max (2 seconds per iteration)
         poll_interval = 2  # seconds
 
-        log.info(f"Polling batch status: {batch_id}")
+        log.debug(f"Polling batch status: {batch_id}")
 
         for iteration in range(max_iterations):
             try:
@@ -398,7 +398,7 @@ class MinerULoader:
             state = file_result.get("state")
 
             if state == "done":
-                log.info(f"Processing complete for {filename}")
+                log.debug(f"Processing complete for {filename}")
                 return file_result
             elif state == "failed":
                 error_msg = file_result.get("err_msg", "Unknown error")
@@ -409,7 +409,7 @@ class MinerULoader:
             elif state in ["waiting-file", "pending", "running", "converting"]:
                 # Still processing
                 if iteration % 10 == 0:  # Log every 20 seconds
-                    log.info(
+                    log.debug(
                         f"Processing status: {state} (iteration {iteration + 1}/{max_iterations})"
                     )
                 time.sleep(poll_interval)
@@ -428,7 +428,7 @@ class MinerULoader:
         Download ZIP file from CDN and extract markdown content.
         Returns the markdown content as a string.
         """
-        log.info(f"Downloading results from: {zip_url}")
+        log.debug(f"Downloading results from: {zip_url}")
 
         try:
             response = requests.get(zip_url, timeout=60)
@@ -468,7 +468,7 @@ class MinerULoader:
                         # Look for any .md file
                         if file.endswith(".md"):
                             found_md_path = full_path
-                            log.info(f"Found markdown file at: {full_path}")
+                            log.debug(f"Found markdown file at: {full_path}")
                             try:
                                 with open(full_path, "r", encoding="utf-8") as f:
                                     markdown_content = f.read()
@@ -518,7 +518,7 @@ class MinerULoader:
                 detail="Extracted markdown content is empty",
             )
 
-        log.info(
+        log.debug(
             f"Successfully extracted markdown content ({len(markdown_content)} characters)"
         )
         return markdown_content

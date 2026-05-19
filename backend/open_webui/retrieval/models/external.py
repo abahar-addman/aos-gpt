@@ -38,8 +38,8 @@ class ExternalReranker(BaseReranker):
         }
 
         try:
-            log.info(f"ExternalReranker:predict:model {self.model}")
-            log.info(f"ExternalReranker:predict:query {query}")
+            log.debug(f"ExternalReranker:predict:model {self.model}")
+            log.debug(f"ExternalReranker:predict:query {query}")
 
             headers = {
                 "Content-Type": "application/json",

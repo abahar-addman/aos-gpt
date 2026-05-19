@@ -15,6 +15,10 @@ from open_webui.env import (
     AUDIT_UVICORN_LOGGER_NAMES,
     ENABLE_OTEL,
     ENABLE_OTEL_LOGS,
+    LOG_FORMAT,
+    DD_SERVICE,
+    DD_ENV,
+    DD_VERSION,
 )
 
 if TYPE_CHECKING:
@@ -41,6 +45,49 @@ def stdout_format(record: "Record") -> str:
         "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
         "<level>{message}</level>" + extra_format + "\n{exception}"
     )
+
+
+def stdout_json_sink(message) -> None:
+    """
+    Loguru sink that emits one JSON object per line to stdout for Datadog ingestion.
+
+    Datadog parses JSON stdout natively and surfaces top-level keys as facets. We
+    keep the standard `level`/`logger`/`message` keys, flatten Datadog's reserved
+    `dd.trace_id`/`dd.span_id` so log-trace correlation works, and stamp the
+    Unified Service Tagging fields on every line.
+    """
+    record = message.record
+    payload = {
+        "timestamp": record["time"].isoformat(),
+        "level": record["level"].name,
+        "logger": record["name"],
+        "function": record["function"],
+        "line": record["line"],
+        "message": record["message"],
+        "service": DD_SERVICE,
+        "env": DD_ENV,
+    }
+    if DD_VERSION:
+        payload["version"] = DD_VERSION
+
+    extra = dict(record["extra"])
+    # Datadog's reserved correlation keys are dotted; lift them to the top level
+    # rather than nesting inside "extra" so the UI auto-links logs to traces.
+    for dd_key in ("dd.trace_id", "dd.span_id"):
+        if dd_key in extra:
+            payload[dd_key] = extra.pop(dd_key)
+    if extra:
+        payload["extra"] = extra
+
+    if record["exception"] is not None:
+        exc = record["exception"]
+        payload["error"] = {
+            "kind": exc.type.__name__ if exc.type else None,
+            "message": str(exc.value) if exc.value else None,
+            "stack": message,  # loguru renders traceback into the formatted message
+        }
+
+    print(json.dumps(payload, default=str), file=sys.stdout, flush=True)
 
 
 class InterceptHandler(logging.Handler):
@@ -80,8 +127,12 @@ class InterceptHandler(logging.Handler):
         extras = {}
         context = trace.get_current_span().get_span_context()
         if context.is_valid:
-            extras["trace_id"] = trace.format_trace_id(context.trace_id)
-            extras["span_id"] = trace.format_span_id(context.span_id)
+            # Datadog's log-trace correlation requires the reserved keys
+            # `dd.trace_id` and `dd.span_id` as decimal strings, with the
+            # trace_id truncated to its lower 64 bits. See:
+            # https://docs.datadoghq.com/tracing/other_telemetry/connect_logs_and_traces/opentelemetry/
+            extras["dd.trace_id"] = str(context.trace_id & 0xFFFFFFFFFFFFFFFF)
+            extras["dd.span_id"] = str(context.span_id)
         return extras
 
 
@@ -127,14 +178,23 @@ def start_logger():
     """
     logger.remove()
 
-    logger.add(
-        sys.stdout,
-        level=GLOBAL_LOG_LEVEL,
-        format=stdout_format,
-        filter=lambda record: (
-            "auditable" not in record["extra"] if ENABLE_AUDIT_STDOUT else True
-        ),
+    stdout_filter = lambda record: (
+        "auditable" not in record["extra"] if ENABLE_AUDIT_STDOUT else True
     )
+
+    if LOG_FORMAT == "json":
+        logger.add(
+            stdout_json_sink,
+            level=GLOBAL_LOG_LEVEL,
+            filter=stdout_filter,
+        )
+    else:
+        logger.add(
+            sys.stdout,
+            level=GLOBAL_LOG_LEVEL,
+            format=stdout_format,
+            filter=stdout_filter,
+        )
     if AUDIT_LOG_LEVEL != "NONE" and ENABLE_AUDIT_LOGS_FILE:
         try:
             logger.add(

@@ -250,7 +250,7 @@ async def verify_tool_servers_config(
                                         ),
                                     }
                                 except Exception as e:
-                                    log.info(
+                                    log.warning(
                                         f"Failed to parse OAuth 2.1 discovery document: {e}"
                                     )
                                     raise HTTPException(

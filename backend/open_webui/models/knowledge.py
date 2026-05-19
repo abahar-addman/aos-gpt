@@ -280,7 +280,7 @@ class KnowledgeTable:
 
                 return KnowledgeListResponse(items=knowledge_bases, total=total)
         except Exception as e:
-            print(e)
+            log.exception("Failed to list knowledge bases")
             return KnowledgeListResponse(items=[], total=0)
 
     def search_knowledge_files(
@@ -351,7 +351,7 @@ class KnowledgeTable:
                 return KnowledgeFileListResponse(items=items, total=total)
 
         except Exception as e:
-            print("search_knowledge_files error:", e)
+            log.exception("search_knowledge_files error")
             return KnowledgeFileListResponse(items=[], total=0)
 
     def check_access_by_user_id(
@@ -526,7 +526,7 @@ class KnowledgeTable:
 
                 return KnowledgeFileListResponse(items=files, total=total)
         except Exception as e:
-            print(e)
+            log.exception("Failed to list knowledge files")
             return KnowledgeFileListResponse(items=[], total=0)
 
     def get_files_by_id(

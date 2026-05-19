@@ -79,9 +79,26 @@ else
     ARGS=(--workers "$UVICORN_WORKERS")
 fi
 
-# Run uvicorn
-WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app \
-    --host "$HOST" \
-    --port "$PORT" \
-    --forwarded-allow-ips '*' \
-    "${ARGS[@]}"
+# Datadog APM tracer setup. ddtrace-run instruments uvicorn/FastAPI/etc and
+# patches the stdlib logger so dd.trace_id/dd.span_id land on every LogRecord;
+# our Loguru sink (utils/logger.py) lifts them into the JSON payload so the
+# Datadog Logs UI auto-correlates with APM traces. ddtrace is a no-op when the
+# binary isn't installed (DD_TRACE_ENABLED=false) — set it that way for local
+# dev where you don't want the tracer.
+export DD_LOGS_INJECTION=${DD_LOGS_INJECTION:-true}
+DDTRACE_RUN=$(command -v ddtrace-run || true)
+
+# Run uvicorn (under ddtrace-run when available)
+if [ -n "$DDTRACE_RUN" ] && [ "${DD_TRACE_ENABLED:-true}" = "true" ]; then
+    WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$DDTRACE_RUN" "$PYTHON_CMD" -m uvicorn open_webui.main:app \
+        --host "$HOST" \
+        --port "$PORT" \
+        --forwarded-allow-ips '*' \
+        "${ARGS[@]}"
+else
+    WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec "$PYTHON_CMD" -m uvicorn open_webui.main:app \
+        --host "$HOST" \
+        --port "$PORT" \
+        --forwarded-allow-ips '*' \
+        "${ARGS[@]}"
+fi

@@ -129,7 +129,7 @@ def convert_audio_to_mp3(file_path):
         output_path = os.path.splitext(file_path)[0] + ".mp3"
         audio = AudioSegment.from_file(file_path)
         audio.export(output_path, format="mp3")
-        log.info(f"Converted {file_path} to {output_path}")
+        log.debug(f"Converted {file_path} to {output_path}")
         return output_path
     except Exception as e:
         log.error(f"Error converting audio file: {e}")
@@ -653,7 +653,7 @@ def transcription_handler(request, file_path, metadata, user=None):
             language=languages[0],
             multilingual=WHISPER_MULTILINGUAL,
         )
-        log.info(
+        log.debug(
             "Detected language '%s' with probability %f"
             % (info.language, info.language_probability)
         )
@@ -953,7 +953,7 @@ def transcription_handler(request, file_path, metadata, user=None):
             # Use voxtral-mini-latest as the default model for transcription
             model = request.app.state.config.STT_MODEL or "voxtral-mini-latest"
 
-            log.info(
+            log.debug(
                 f"Mistral STT - model: {model}, "
                 f"method: {'chat_completions' if use_chat_completions else 'transcriptions'}"
             )
@@ -1108,7 +1108,7 @@ def transcription_handler(request, file_path, metadata, user=None):
 def transcribe(
     request: Request, file_path: str, metadata: Optional[dict] = None, user=None
 ):
-    log.info(f"transcribe: {file_path} {metadata}")
+    log.debug(f"transcribe: {file_path} {metadata}")
 
     if is_audio_conversion_required(file_path):
         file_path = convert_audio_to_mp3(file_path)
@@ -1121,7 +1121,7 @@ def transcribe(
     # Always produce a list of chunk paths (could be one entry if small)
     try:
         chunk_paths = split_audio(file_path, MAX_FILE_SIZE)
-        print(f"Chunk paths: {chunk_paths}")
+        log.debug(f"Chunk paths: {chunk_paths}")
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -1238,7 +1238,7 @@ def transcription(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
-    log.info(f"file.content_type: {file.content_type}")
+    log.debug(f"file.content_type: {file.content_type}")
     stt_supported_content_types = getattr(
         request.app.state.config, "STT_SUPPORTED_CONTENT_TYPES", []
     )

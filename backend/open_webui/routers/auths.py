@@ -394,10 +394,10 @@ async def ldap_auth(
         ]
         if ENABLE_LDAP_GROUP_MANAGEMENT:
             search_attributes.append(f"{LDAP_ATTRIBUTE_FOR_GROUPS}")
-            log.info(
+            log.debug(
                 f"LDAP Group Management enabled. Adding {LDAP_ATTRIBUTE_FOR_GROUPS} to search attributes"
             )
-        log.info(f"LDAP search attributes: {search_attributes}")
+        log.debug(f"LDAP search attributes: {search_attributes}")
 
         search_success = await asyncio.to_thread(
             connection_app.search,
@@ -436,34 +436,34 @@ async def ldap_auth(
         user_groups = []
         if ENABLE_LDAP_GROUP_MANAGEMENT and LDAP_ATTRIBUTE_FOR_GROUPS in entry:
             group_dns = entry[LDAP_ATTRIBUTE_FOR_GROUPS]
-            log.info(f"LDAP raw group DNs for user {username_list}: {group_dns}")
+            log.debug(f"LDAP raw group DNs for user {username_list}: {group_dns}")
 
             if group_dns:
-                log.info(f"LDAP group_dns original: {group_dns}")
-                log.info(f"LDAP group_dns type: {type(group_dns)}")
-                log.info(f"LDAP group_dns length: {len(group_dns)}")
+                log.debug(f"LDAP group_dns original: {group_dns}")
+                log.debug(f"LDAP group_dns type: {type(group_dns)}")
+                log.debug(f"LDAP group_dns length: {len(group_dns)}")
 
                 if hasattr(group_dns, "value"):
                     group_dns = group_dns.value
-                    log.info(f"Extracted .value property: {group_dns}")
+                    log.debug(f"Extracted .value property: {group_dns}")
                 elif hasattr(group_dns, "__iter__") and not isinstance(
                     group_dns, (str, bytes)
                 ):
                     group_dns = list(group_dns)
-                    log.info(f"Converted to list: {group_dns}")
+                    log.debug(f"Converted to list: {group_dns}")
 
                 if isinstance(group_dns, list):
                     group_dns = [str(item) for item in group_dns]
                 else:
                     group_dns = [str(group_dns)]
 
-                log.info(
+                log.debug(
                     f"LDAP group_dns after processing - type: {type(group_dns)}, length: {len(group_dns)}"
                 )
 
                 for group_idx, group_dn in enumerate(group_dns):
                     group_dn = str(group_dn)
-                    log.info(f"Processing group DN #{group_idx + 1}: {group_dn}")
+                    log.debug(f"Processing group DN #{group_idx + 1}: {group_dn}")
 
                     try:
                         group_cn = None
@@ -486,11 +486,11 @@ async def ldap_auth(
                             f"Failed to extract group name from DN {group_dn}: {e}"
                         )
 
-                log.info(
+                log.debug(
                     f"LDAP groups for user {username_list}: {user_groups} (total: {len(user_groups)})"
                 )
             else:
-                log.info(f"No groups found for user {username_list}")
+                log.debug(f"No groups found for user {username_list}")
         elif ENABLE_LDAP_GROUP_MANAGEMENT:
             log.warning(
                 f"LDAP Group Management enabled but {LDAP_ATTRIBUTE_FOR_GROUPS} attribute not found in user entry"
@@ -555,7 +555,7 @@ async def ldap_auth(
                         Groups.create_groups_by_group_names(user.id, user_groups, db=db)
                     try:
                         Groups.sync_groups_by_group_names(user.id, user_groups, db=db)
-                        log.info(
+                        log.debug(
                             f"Successfully synced groups for user {user.id}: {user_groups}"
                         )
                     except Exception as e:
@@ -661,7 +661,7 @@ async def signin(
         password_bytes = form_data.password.encode("utf-8")
         if len(password_bytes) > 72:
             # TODO: Implement other hashing algorithms that support longer passwords
-            log.info("Password too long, truncating to 72 bytes for bcrypt")
+            log.warning("Password too long, truncating to 72 bytes for bcrypt")
             password_bytes = password_bytes[:72]
 
             # decode safely — ignore incomplete UTF-8 sequences
@@ -952,7 +952,7 @@ async def get_admin_details(
         admin_email = request.app.state.config.ADMIN_EMAIL
         admin_name = None
 
-        log.info(f"Admin details - Email: {admin_email}, Name: {admin_name}")
+        log.debug(f"Admin details - Email: {admin_email}, Name: {admin_name}")
 
         if admin_email:
             admin = Users.get_user_by_email(admin_email, db=db)

@@ -236,7 +236,7 @@ def load_tool_module_by_id(tool_id, content=None):
         # Executing the modified content in the created module's namespace
         exec(content, module.__dict__)
         frontmatter = extract_frontmatter(content)
-        log.info(f"Loaded module: {module.__name__}")
+        log.debug(f"Loaded module: {module.__name__}")
 
         # Create and return the object if the class 'Tools' is found in the module
         if hasattr(module, "Tools"):
@@ -280,7 +280,7 @@ def load_function_module_by_id(function_id: str, content: str | None = None):
         # Execute the modified content in the created module's namespace
         exec(content, module.__dict__)
         frontmatter = extract_frontmatter(content)
-        log.info(f"Loaded module: {module.__name__}")
+        log.debug(f"Loaded module: {module.__name__}")
 
         # Create appropriate object based on available class type in the module
         if hasattr(module, "Pipe"):
@@ -422,7 +422,7 @@ def install_frontmatter_requirements(requirements: str):
             )
 
     else:
-        log.info("No requirements found in frontmatter.")
+        log.debug("No requirements found in frontmatter.")
 
 
 def install_tool_and_function_dependencies():

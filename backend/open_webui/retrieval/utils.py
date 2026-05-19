@@ -147,7 +147,7 @@ def query_doc(
         )
 
         if result:
-            log.info(f"query_doc:result {result.ids} {result.metadatas}")
+            log.debug(f"query_doc:result {result.ids} {result.metadatas}")
 
         return result
     except Exception as e:
@@ -161,7 +161,7 @@ def get_doc(collection_name: str, user: UserModel = None):
         result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
 
         if result:
-            log.info(f"query_doc:result {result.ids} {result.metadatas}")
+            log.debug(f"query_doc:result {result.ids} {result.metadatas}")
 
         return result
     except Exception as e:
@@ -307,7 +307,7 @@ async def query_doc_with_hybrid_search(
             "metadatas": [metadatas],
         }
 
-        log.info(
+        log.debug(
             "query_doc_with_hybrid_search:result "
             + f'{result["metadatas"]} {result["distances"]}'
         )
@@ -484,7 +484,7 @@ async def query_collection_with_hybrid_search(
             log.exception(f"Failed to fetch collection {collection_name}: {e}")
             collection_results[collection_name] = None
 
-    log.info(
+    log.debug(
         f"Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections..."
     )
 

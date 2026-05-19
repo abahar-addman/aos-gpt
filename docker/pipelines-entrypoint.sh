@@ -58,5 +58,11 @@ fi
 
 echo "[pipelines-entrypoint] Starting pipelines server..."
 
-# Hand off to the original pipelines entrypoint / CMD
-exec bash start.sh
+# Enable ddtrace log injection so dd.trace_id/dd.span_id are stamped onto
+# every LogRecord — our JSON formatter inside v3_agent_pipe.py lifts them
+# into Datadog's reserved keys so the Logs UI auto-links to APM traces.
+export DD_LOGS_INJECTION=${DD_LOGS_INJECTION:-true}
+
+# Hand off to the original pipelines entrypoint / CMD under ddtrace-run.
+# DD_SERVICE / DD_ENV / DD_VERSION are read from env (set in docker-compose).
+exec ddtrace-run bash start.sh

@@ -36,6 +36,10 @@ services:
       - ../.env
     environment:
       - PIPELINES_API_KEY=0p3n-w3bu!
+      # Override DD_SERVICE so the pipelines container shows up as a distinct
+      # Datadog service from aos-gpt — DD_ENV / DD_VERSION / LOG_FORMAT are
+      # inherited from the shared .env file.
+      - DD_SERVICE=aos-pipelines
 
 volumes:
   aos-gpt: {}

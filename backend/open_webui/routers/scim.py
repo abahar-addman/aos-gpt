@@ -262,7 +262,7 @@ def get_scim_auth(
 
         # Check if SCIM is enabled
         enable_scim = getattr(request.app.state, "ENABLE_SCIM", False)
-        log.info(
+        log.debug(
             f"SCIM auth check - raw ENABLE_SCIM: {enable_scim}, type: {type(enable_scim)}"
         )
 

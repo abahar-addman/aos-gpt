@@ -70,7 +70,7 @@ class DatalabMarkerLoader:
             response = requests.get(url, headers=headers)
             response.raise_for_status()
             result = response.json()
-            log.info(f"Marker API status check for request {request_id}: {result}")
+            log.debug(f"Marker API status check for request {request_id}: {result}")
             return result
         except requests.HTTPError as e:
             log.error(f"Error checking Marker request status: {e}")
@@ -103,7 +103,7 @@ class DatalabMarkerLoader:
         if self.additional_config and self.additional_config.strip():
             form_data["additional_config"] = self.additional_config
 
-        log.info(
+        log.debug(
             f"Datalab Marker POST request parameters: {{'filename': '{filename}', 'mime_type': '{mime_type}', **{form_data}}}"
         )
 
@@ -174,7 +174,7 @@ class DatalabMarkerLoader:
                             "total_cost",
                         )
                     }
-                    log.info(
+                    log.debug(
                         f"Marker processing completed successfully: {json.dumps(summary, indent=2)}"
                     )
                     break
@@ -211,7 +211,7 @@ class DatalabMarkerLoader:
         else:
             # Self-hosted direct response - content in "output" field
             if "output" in result:
-                log.info("Self-hosted Marker returned direct response without polling")
+                log.debug("Self-hosted Marker returned direct response without polling")
                 raw_content = result.get("output")
                 final_result = result
             else:
@@ -252,7 +252,7 @@ class DatalabMarkerLoader:
         try:
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(full_text)
-            log.info(f"Saved Marker output to: {output_path}")
+            log.debug(f"Saved Marker output to: {output_path}")
         except Exception as e:
             log.warning(f"Failed to write marker output to disk: {e}")
 

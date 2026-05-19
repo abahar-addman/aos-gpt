@@ -1,8 +1,11 @@
+import logging
 import time
 from typing import Optional
 
 from sqlalchemy.orm import Session, defer
 from open_webui.internal.db import Base, JSONField, get_db, get_db_context
+
+log = logging.getLogger(__name__)
 
 
 from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
@@ -722,7 +725,7 @@ class UsersTable:
                 db.refresh(user)
                 return UserModel.model_validate(user)
         except Exception as e:
-            print(e)
+            log.exception("Failed to update user")
             return None
 
     def update_user_settings_by_id(

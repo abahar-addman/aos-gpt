@@ -1211,7 +1211,7 @@ class ChatTable:
             # Perform pagination at the SQL level
             all_chats = query.offset(skip).limit(limit).all()
 
-            log.info(f"The number of chats: {len(all_chats)}")
+            log.debug(f"The number of chats: {len(all_chats)}")
 
             # Validate and return chats
             return [ChatModel.model_validate(chat) for chat in all_chats]
@@ -1289,7 +1289,7 @@ class ChatTable:
             query = db.query(Chat).filter_by(user_id=user_id)
             tag_id = tag_name.replace(" ", "_").lower()
 
-            log.info(f"DB dialect name: {db.bind.dialect.name}")
+            log.debug(f"DB dialect name: {db.bind.dialect.name}")
             if db.bind.dialect.name == "sqlite":
                 # SQLite JSON1 querying for tags within the meta JSON field
                 query = query.filter(
@@ -1392,7 +1392,7 @@ class ChatTable:
             query = query.filter_by(folder_id=folder_id)
             count = query.count()
 
-            log.info(f"Count of chats for folder '{folder_id}': {count}")
+            log.debug(f"Count of chats for folder '{folder_id}': {count}")
             return count
 
     def delete_tag_by_id_and_user_id_and_tag_name(

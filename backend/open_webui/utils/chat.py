@@ -62,7 +62,7 @@ async def generate_direct_chat_completion(
     user: Any,
     models: dict,
 ):
-    log.info("generate_direct_chat_completion")
+    log.debug("generate_direct_chat_completion")
 
     metadata = form_data.pop("metadata", {})
 
@@ -73,7 +73,7 @@ async def generate_direct_chat_completion(
     event_caller = get_event_call(metadata)
 
     channel = f"{user_id}:{session_id}:{request_id}"
-    logging.info(f"WebSocket channel: {channel}")
+    log.debug(f"WebSocket channel: {channel}")
 
     if form_data.get("stream"):
         q = asyncio.Queue()
@@ -100,7 +100,7 @@ async def generate_direct_chat_completion(
             }
         )
 
-        log.info(f"res: {res}")
+        log.debug(f"res: {res}")
 
         if res.get("status", False):
             # Define a generator to stream responses

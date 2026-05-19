@@ -319,7 +319,7 @@ def merge_ollama_models_lists(model_lists):
     key=lambda _, user: f"ollama_all_models_{user.id}" if user else "ollama_all_models",
 )
 async def get_all_models(request: Request, user: UserModel = None):
-    log.info("get_all_models()")
+    log.debug("get_all_models()")
     if request.app.state.config.ENABLE_OLLAMA_API:
         request_tasks = []
         for idx, url in enumerate(request.app.state.config.OLLAMA_BASE_URLS):
@@ -720,7 +720,7 @@ async def pull_model(
     form_data["model"] = form_data.get("model", form_data.get("name"))
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-    log.info(f"url: {url}")
+    log.debug(f"url: {url}")
 
     # Admin should be able to pull models from any source
     payload = {**form_data, "insecure": True}
@@ -1022,7 +1022,7 @@ async def embed(
     if not request.app.state.config.ENABLE_OLLAMA_API:
         raise HTTPException(status_code=503, detail="Ollama API is disabled")
 
-    log.info(f"generate_ollama_batch_embeddings {form_data}")
+    log.debug(f"generate_ollama_batch_embeddings {form_data}")
 
     if url_idx is None:
         model = form_data.model
@@ -1107,7 +1107,7 @@ async def embeddings(
     if not request.app.state.config.ENABLE_OLLAMA_API:
         raise HTTPException(status_code=503, detail="Ollama API is disabled")
 
-    log.info(f"generate_ollama_embeddings {form_data}")
+    log.debug(f"generate_ollama_embeddings {form_data}")
 
     if url_idx is None:
         model = form_data.model
@@ -1813,11 +1813,11 @@ async def upload_model(
     async def file_process_stream():
         nonlocal ollama_url
         total_size = os.path.getsize(file_path)
-        log.info(f"Total Model Size: {str(total_size)}")  # DEBUG
+        log.debug(f"Total Model Size: {str(total_size)}")
 
         # --- P2: SSE progress + calculate sha256 hash ---
         file_hash = calculate_sha256(file_path, chunk_size)
-        log.info(f"Model Hash: {str(file_hash)}")  # DEBUG
+        log.debug(f"Model Hash: {str(file_hash)}")
         try:
             with open(file_path, "rb") as f:
                 bytes_read = 0
@@ -1837,20 +1837,20 @@ async def upload_model(
                 response = requests.post(url, data=f)
 
             if response.ok:
-                log.info(f"Uploaded to /api/blobs")  # DEBUG
+                log.debug(f"Uploaded to /api/blobs")
                 # Remove local file
                 os.remove(file_path)
 
                 # Create model in ollama
                 model_name, ext = os.path.splitext(filename)
-                log.info(f"Created Model: {model_name}")  # DEBUG
+                log.debug(f"Created Model: {model_name}")
 
                 create_payload = {
                     "model": model_name,
                     # Reference the file by its original name => the uploaded blob's digest
                     "files": {filename: f"sha256:{file_hash}"},
                 }
-                log.info(f"Model Payload: {create_payload}")  # DEBUG
+                log.debug(f"Model Payload: {create_payload}")
 
                 # Call ollama /api/create
                 # https://github.com/ollama/ollama/blob/main/docs/api.md#create-a-model
@@ -1861,7 +1861,7 @@ async def upload_model(
                 )
 
                 if create_resp.ok:
-                    log.info(f"API SUCCESS!")  # DEBUG
+                    log.debug(f"API SUCCESS!")
                     done_msg = {
                         "done": True,
                         "blob": f"sha256:{file_hash}",

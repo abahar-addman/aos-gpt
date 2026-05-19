@@ -179,12 +179,12 @@ class PersistentConfig(Generic[T]):
                 self.config_path.startswith("oauth.")
                 and not ENABLE_OAUTH_PERSISTENT_CONFIG
             ):
-                log.info(
+                log.debug(
                     f"Skipping loading of '{env_name}' as OAuth persistent config is disabled"
                 )
                 self.value = env_value
             else:
-                log.info(f"'{env_name}' loaded from the latest database entry")
+                log.debug(f"'{env_name}' loaded from the latest database entry")
                 self.value = self.config_value
         else:
             self.value = env_value
@@ -214,7 +214,7 @@ class PersistentConfig(Generic[T]):
             log.info(f"Updated {self.env_name} to new value {self.value}")
 
     def save(self):
-        log.info(f"Saving '{self.env_name}' to the database")
+        log.debug(f"Saving '{self.env_name}' to the database")
         path_parts = self.config_path.split(".")
         sub_config = CONFIG_DATA
         for key in path_parts[:-1]:
@@ -285,7 +285,7 @@ class AppConfig:
                         # Update the in-memory value if different
                         if self._state[key].value != decoded_value:
                             self._state[key].value = decoded_value
-                            log.info(f"Updated {key} from Redis: {decoded_value}")
+                            log.debug(f"Updated {key} from Redis: {decoded_value}")
 
                     except json.JSONDecodeError:
                         log.error(f"Invalid JSON format in Redis for {key}: {redis_value}")
@@ -1051,9 +1051,9 @@ def _resolve_ollama_base_url(url: str) -> str:
 
     if not default.result() and fallback.result():
         url = url.replace(":11434", ":12434")
-        log.info(f"Ollama port 11434 unreachable on {host}, falling back to 12434")
+        log.warning(f"Ollama port 11434 unreachable on {host}, falling back to 12434")
     elif not default.result():
-        log.info(f"Ollama ports 11434 and 12434 both unreachable on {host}")
+        log.warning(f"Ollama ports 11434 and 12434 both unreachable on {host}")
 
     return url
 

@@ -72,7 +72,7 @@ class OlmOCRLoader:
         finally:
             doc.close()
 
-        log.info(f"Rendered {len(images)} pages from {self.file_name}")
+        log.debug(f"Rendered {len(images)} pages from {self.file_name}")
         return images
 
     # ------------------------------------------------------------------ #
@@ -146,7 +146,7 @@ class OlmOCRLoader:
 
         result = self._retry_sync(request_fn)
         content = result.get("message", {}).get("content", "")
-        log.info(f"OCR completed for page {page_index + 1} of {self.file_name}")
+        log.debug(f"OCR completed for page {page_index + 1} of {self.file_name}")
         return content
 
     async def _ocr_page_async(
@@ -178,7 +178,7 @@ class OlmOCRLoader:
 
         result = await self._retry_async(request_fn)
         content = result.get("message", {}).get("content", "")
-        log.info(f"OCR completed for page {page_index + 1} of {self.file_name}")
+        log.debug(f"OCR completed for page {page_index + 1} of {self.file_name}")
         return content
 
     # ------------------------------------------------------------------ #
@@ -193,7 +193,7 @@ class OlmOCRLoader:
         for idx, text in enumerate(pages_text):
             cleaned = text.strip() if isinstance(text, str) else str(text).strip()
             if not cleaned:
-                log.info(f"Skipping empty page {idx + 1}")
+                log.debug(f"Skipping empty page {idx + 1}")
                 continue
 
             documents.append(
@@ -244,7 +244,7 @@ class OlmOCRLoader:
             documents = self._build_documents(pages_text)
 
             total_time = time.time() - start_time
-            log.info(
+            log.debug(
                 f"OlmOCR sync workflow completed in {total_time:.2f}s, "
                 f"produced {len(documents)} documents from {self.file_name}"
             )
@@ -290,7 +290,7 @@ class OlmOCRLoader:
             documents = self._build_documents(pages_text)
 
             total_time = time.time() - start_time
-            log.info(
+            log.debug(
                 f"OlmOCR async workflow completed in {total_time:.2f}s, "
                 f"produced {len(documents)} documents from {self.file_name}"
             )

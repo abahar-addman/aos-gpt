@@ -1492,12 +1492,12 @@ def save_docs_to_vector_db(
                     existing_file_id = result.metadatas[0][0].get("file_id")
 
                 if existing_file_id != metadata.get("file_id"):
-                    log.info(f"Document with hash {metadata['hash']} already exists")
+                    log.debug(f"Document with hash {metadata['hash']} already exists")
                     raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
         if request.app.state.config.ENABLE_MARKDOWN_HEADER_TEXT_SPLITTER:
-            log.info("Using markdown header text splitter")
+            log.debug("Using markdown header text splitter")
             # Define headers to split on - covering most common markdown header levels
             markdown_splitter = MarkdownHeaderTextSplitter(
                 headers_to_split_on=[
@@ -1537,7 +1537,7 @@ def save_docs_to_vector_db(
             )
             docs = text_splitter.split_documents(docs)
         elif request.app.state.config.TEXT_SPLITTER == "token":
-            log.info(
+            log.debug(
                 f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
             )
 
@@ -1570,18 +1570,18 @@ def save_docs_to_vector_db(
 
     try:
         if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
-            log.info(f"collection {collection_name} already exists")
+            log.debug(f"collection {collection_name} already exists")
 
             if overwrite:
                 VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
-                log.info(f"deleting existing collection {collection_name}")
+                log.debug(f"deleting existing collection {collection_name}")
             elif add is False:
-                log.info(
+                log.debug(
                     f"collection {collection_name} already exists, overwrite is False and add is False"
                 )
                 return True
 
-        log.info(f"generating embeddings for {collection_name}")
+        log.debug(f"generating embeddings for {collection_name}")
         embedding_function = get_embedding_function(
             request.app.state.config.RAG_EMBEDDING_ENGINE,
             request.app.state.config.RAG_EMBEDDING_MODEL,
@@ -1626,7 +1626,7 @@ def save_docs_to_vector_db(
             request.app.state.main_loop,
         )
         embeddings = future.result(timeout=embedding_timeout)
-        log.info(f"embeddings generated {len(embeddings)} for {len(texts)} items")
+        log.debug(f"embeddings generated {len(embeddings)} for {len(texts)} items")
 
         items = [
             {
@@ -1638,13 +1638,13 @@ def save_docs_to_vector_db(
             for idx, text in enumerate(texts)
         ]
 
-        log.info(f"adding to collection {collection_name}")
+        log.debug(f"adding to collection {collection_name}")
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
             items=items,
         )
 
-        log.info(f"added {len(items)} items to collection {collection_name}")
+        log.debug(f"added {len(items)} items to collection {collection_name}")
         return True
     except Exception as e:
         log.exception(e)
@@ -1850,7 +1850,7 @@ def process_file(
                         add=(True if form_data.collection_name else False),
                         user=user,
                     )
-                    log.info(f"added {len(docs)} items to collection {collection_name}")
+                    log.debug(f"added {len(docs)} items to collection {collection_name}")
 
                     if result:
                         # Fresh session for the final update.
