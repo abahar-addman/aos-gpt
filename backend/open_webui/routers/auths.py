@@ -89,6 +89,9 @@ router = APIRouter()
 
 log = logging.getLogger(__name__)
 
+# Signup is restricted to users with an email from this domain.
+SIGNUP_ALLOWED_EMAIL_DOMAIN = "addmangroup.com"
+
 signin_rate_limiter = RateLimiter(
     redis_client=get_redis_client(), limit=5 * 3, window=60 * 3
 )
@@ -727,10 +730,6 @@ async def signup_handler(
             },
         )
 
-    if not has_users:
-        # Disable signup after the first user is created
-        request.app.state.config.ENABLE_SIGNUP = False
-
     apply_default_group_assignment(
         request.app.state.config.DEFAULT_GROUP_ID,
         user.id,
@@ -767,6 +766,12 @@ async def signup(
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
+        )
+
+    if form_data.email.lower().split("@")[-1] != SIGNUP_ALLOWED_EMAIL_DOMAIN:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail=f"Sign up is restricted to @{SIGNUP_ALLOWED_EMAIL_DOMAIN} email addresses.",
         )
 
     if Users.get_user_by_email(form_data.email.lower(), db=db):

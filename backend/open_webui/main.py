@@ -620,6 +620,11 @@ async def lifespan(app: FastAPI):
             # Disable signup since we now have an admin
             app.state.config.ENABLE_SIGNUP = False
 
+    # Self-heal: if there are no users, force signup on so the first user
+    # (the master admin) can be created. Overrides any stale persisted value.
+    if not Users.has_users():
+        app.state.config.ENABLE_SIGNUP = True
+
     # This should be blocking (sync) so functions are not deactivated on first /get_models calls
     # when the first user lands on the / route.
     log.info("Installing external dependencies of functions and tools...")

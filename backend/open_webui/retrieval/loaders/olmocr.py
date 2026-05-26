@@ -9,7 +9,6 @@ import time
 from typing import List, Dict, Any
 from contextlib import asynccontextmanager
 
-import fitz  # PyMuPDF
 from langchain_core.documents import Document
 from open_webui.env import GLOBAL_LOG_LEVEL
 
@@ -60,6 +59,13 @@ class OlmOCRLoader:
 
     def _render_pages_to_base64(self) -> List[str]:
         """Render each PDF page to a PNG image and return as base64 strings."""
+        try:
+            import fitz  # PyMuPDF
+        except ImportError as e:
+            raise ImportError(
+                "PyMuPDF is required for OlmOCR. Install it with `pip install pymupdf`."
+            ) from e
+
         images: List[str] = []
         doc = fitz.open(self.file_path)
         try:
