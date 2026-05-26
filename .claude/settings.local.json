@@ -29,7 +29,9 @@
       "Bash(head:*)",
       "Bash(npm run:*)",
       "Bash(bash -n docker/pipelines-entrypoint.sh)",
-      "Bash(bash -n backend/start.sh)"
+      "Bash(bash -n backend/start.sh)",
+      "Bash(psql *)",
+      "Bash(backend/venv/Scripts/python.exe *)"
     ]
   }
 }

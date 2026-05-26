@@ -35,6 +35,11 @@ try:
     from dotenv import find_dotenv, load_dotenv
 
     load_dotenv(find_dotenv(str(BASE_DIR / ".env")))
+    # Local dev convenience: also load .env.development if present.
+    # override=False so an existing .env (or real env vars) win.
+    dev_env_file = BASE_DIR / ".env.development"
+    if dev_env_file.exists():
+        load_dotenv(str(dev_env_file), override=False)
 except ImportError:
     print("dotenv not installed, skipping...")
 

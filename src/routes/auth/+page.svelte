@@ -402,6 +402,21 @@
 					</button>
 				</form>
 
+				{#if $config?.oauth?.providers?.oidc}
+					<div class="my-6 flex items-center gap-3 text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">
+						<div class="h-px flex-1 bg-gray-200 dark:bg-gray-800"></div>
+						<span>{$i18n.t('Or')}</span>
+						<div class="h-px flex-1 bg-gray-200 dark:bg-gray-800"></div>
+					</div>
+
+					<a
+						href="{WEBUI_BASE_URL}/oauth/oidc/login"
+						class="flex w-full items-center justify-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2.5 text-sm font-medium text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+					>
+						{$i18n.t('Sign in with {{provider}}', { provider: $config.oauth.providers.oidc })}
+					</a>
+				{/if}
+
 				{#if $config?.features.enable_signup}
 					<div class="mt-6 text-sm text-center text-gray-500 dark:text-gray-400">
 						{#if mode === 'signin'}
