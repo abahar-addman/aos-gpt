@@ -15,7 +15,7 @@
 	import Share from '$lib/components/icons/Share.svelte';
 	import Link from '$lib/components/icons/Link.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	export let show = false;
 	export let className = 'max-w-[180px]';

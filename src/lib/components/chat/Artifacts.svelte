@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 	const dispatch = createEventDispatcher();
 
 	import {

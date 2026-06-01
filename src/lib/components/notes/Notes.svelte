@@ -25,11 +25,11 @@
 
 	import { onMount, getContext, onDestroy } from 'svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 	// Assuming $i18n.languages is an array of language codes
 	$: loadLocale($i18n.languages);
 
-	import { goto } from '$app/navigation';
+	import { goto } from '$lib/utils/navigation';
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 	import { createNewNote, deleteNoteById, getNoteList, searchNotes } from '$lib/apis/notes';
 	import { capitalizeFirstLetter, copyToClipboard, getTimeRange } from '$lib/utils';

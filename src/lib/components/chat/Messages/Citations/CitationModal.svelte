@@ -9,7 +9,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	const CONTENT_PREVIEW_LIMIT = 10000;
 	let expandedDocs: Set<number> = new Set();

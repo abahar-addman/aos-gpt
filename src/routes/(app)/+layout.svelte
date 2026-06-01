@@ -5,7 +5,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { goto } from '$app/navigation';
+	import { goto } from '$lib/utils/navigation';
 	import { page } from '$app/stores';
 	import { fade } from 'svelte/transition';
 
@@ -45,7 +45,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { Shortcut, shortcuts } from '$lib/shortcuts';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	let loaded = false;
 	let DB = null;

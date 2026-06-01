@@ -30,7 +30,7 @@
 	import Valves from '$lib/components/common/Valves.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 	const dispatch = createEventDispatcher();
 
 	export let show = false;

@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { getContext } from 'svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	import { getGravatarUrl } from '$lib/apis/utils';
 	import { canvasPixelTest, generateInitialsImage } from '$lib/utils';

@@ -35,7 +35,7 @@
 	export let clone = false;
 	export let disabled = false;
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	let loading = false;
 	let showEditModal = false;

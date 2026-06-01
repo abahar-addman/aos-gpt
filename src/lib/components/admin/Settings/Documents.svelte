@@ -29,7 +29,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	let updateEmbeddingModelLoading = false;
 	let updateRerankingModelLoading = false;

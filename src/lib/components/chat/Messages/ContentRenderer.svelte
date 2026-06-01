@@ -1,6 +1,6 @@
 <script>
 	import { onDestroy, onMount, tick, getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = /** @type {i18nStore} */ (getContext('i18n'));
 
 	import Markdown from './Markdown.svelte';
 	import {

@@ -1,10 +1,11 @@
 <script>
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = /** @type {i18nStore} */ (getContext('i18n'));
 	import WebSearchResults from '../WebSearchResults.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import { t } from 'i18next';
 
+	/** @type {any} */
 	export let status = null;
 	export let done = false;
 </script>

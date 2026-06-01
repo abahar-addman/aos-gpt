@@ -4,7 +4,7 @@
 	import { getModels as _getModels, getToolServersData } from '$lib/apis';
 
 	const dispatch = createEventDispatcher();
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	import { models, settings, toolServers, user } from '$lib/stores';
 

@@ -2,9 +2,9 @@
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick } from 'svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = /** @type {i18nStore} */ (getContext('i18n'));
 
-	import { goto } from '$app/navigation';
+	import { goto } from '$lib/utils/navigation';
 	import { user } from '$lib/stores';
 	import { updateToolAccessGrants } from '$lib/apis/tools';
 

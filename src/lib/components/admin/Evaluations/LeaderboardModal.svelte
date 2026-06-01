@@ -10,7 +10,7 @@
 	export let model = null;
 	export let onClose: () => void = () => {};
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	type TimeRange = '30d' | '1y' | 'all';
 	const TIME_RANGES: { key: TimeRange; label: string; days: number }[] = [

@@ -7,13 +7,13 @@
 
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
+	import { goto } from '$lib/utils/navigation';
 	import { user, config } from '$lib/stores';
 
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import { getFolderById } from '$lib/apis/folders';
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	export let show = false;
 	export let onSubmit: Function = (e) => {};

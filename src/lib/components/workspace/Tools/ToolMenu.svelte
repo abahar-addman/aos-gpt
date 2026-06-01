@@ -14,7 +14,7 @@
 	import Download from '$lib/components/icons/Download.svelte';
 	import { config, user } from '$lib/stores';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	export let editHandler: Function;
 	export let shareHandler: Function;

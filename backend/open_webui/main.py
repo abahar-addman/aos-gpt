@@ -459,6 +459,7 @@ from open_webui.config import (
 )
 from open_webui.env import (
     ENABLE_CUSTOM_MODEL_FALLBACK,
+    WEBUI_BASE_PATH,
     LICENSE_KEY,
     AUDIT_EXCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
@@ -711,6 +712,10 @@ app = FastAPI(
     openapi_url="/openapi.json" if ENV == "dev" else None,
     redoc_url=None,
     lifespan=lifespan,
+    # Set when hosted under a URL prefix behind a prefix-stripping proxy (e.g.
+    # /edison-ai). Routes still match stripped paths; root_path makes redirects /
+    # generated URLs carry the prefix. Empty = root hosting (no effect).
+    root_path=WEBUI_BASE_PATH,
 )
 
 # For Edison AI OIDC/OAuth2
@@ -2446,25 +2451,25 @@ async def get_manifest_json():
             "name": app.state.WEBUI_NAME,
             "short_name": app.state.WEBUI_NAME,
             "description": f"{app.state.WEBUI_NAME} is an open, extensible, user-friendly interface for AI that adapts to your workflow.",
-            "start_url": "/",
+            "start_url": f"{WEBUI_BASE_PATH}/",
             "display": "standalone",
             "background_color": "#343541",
             "icons": [
                 {
-                    "src": "/static/logo.png",
+                    "src": f"{WEBUI_BASE_PATH}/static/logo.png",
                     "type": "image/png",
                     "sizes": "500x500",
                     "purpose": "any",
                 },
                 {
-                    "src": "/static/logo.png",
+                    "src": f"{WEBUI_BASE_PATH}/static/logo.png",
                     "type": "image/png",
                     "sizes": "500x500",
                     "purpose": "maskable",
                 },
             ],
             "share_target": {
-                "action": "/",
+                "action": f"{WEBUI_BASE_PATH}/",
                 "method": "GET",
                 "params": {"text": "shared"},
             },

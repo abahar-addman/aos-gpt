@@ -16,7 +16,7 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import FileItemModal from '$lib/components/common/FileItemModal.svelte';
 
-	const i18n: Writable<any> = getContext('i18n');
+	const i18n: Writable<any> = getContext<i18nStore>('i18n');
 
 	export let show = false;
 

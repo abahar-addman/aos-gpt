@@ -18,7 +18,6 @@ from open_webui.env import (
     LOG_FORMAT,
     DD_SERVICE,
     DD_ENV,
-    DD_VERSION,
 )
 
 if TYPE_CHECKING:
@@ -67,8 +66,6 @@ def stdout_json_sink(message) -> None:
         "service": DD_SERVICE,
         "env": DD_ENV,
     }
-    if DD_VERSION:
-        payload["version"] = DD_VERSION
 
     extra = dict(record["extra"])
     # Datadog's reserved correlation keys are dotted; lift them to the top level

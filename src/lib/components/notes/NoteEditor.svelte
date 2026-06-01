@@ -4,12 +4,12 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	import { marked } from 'marked';
 	import { toast } from 'svelte-sonner';
 
-	import { goto } from '$app/navigation';
+	import { goto } from '$lib/utils/navigation';
 
 	import dayjs from '$lib/dayjs';
 	import calendar from 'dayjs/plugin/calendar';

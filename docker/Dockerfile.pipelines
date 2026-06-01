@@ -20,11 +20,6 @@ RUN pip install --no-cache-dir \
     azure-storage-blob \
     azure-identity
 
-# Install Datadog APM tracer for log/trace correlation. The entrypoint runs the
-# pipelines server under `ddtrace-run`, which injects dd.trace_id/dd.span_id
-# into log records so the Datadog Logs UI auto-links them to APM traces.
-RUN pip install --no-cache-dir ddtrace
-
 # Copy the startup script that syncs pipelines from Azure before starting
 COPY docker/pipelines-entrypoint.sh /app/pipelines-entrypoint.sh
 RUN chmod +x /app/pipelines-entrypoint.sh

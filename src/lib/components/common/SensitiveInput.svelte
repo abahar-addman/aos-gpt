@@ -1,5 +1,5 @@
 <script lang="ts">
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 	import { getContext } from 'svelte';
 	import { settings } from '$lib/stores';
 	export let id = 'password-input';

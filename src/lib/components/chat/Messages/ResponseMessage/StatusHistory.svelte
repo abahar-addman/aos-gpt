@@ -1,6 +1,6 @@
 <script>
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = /** @type {i18nStore} */ (getContext('i18n'));
 
 	import StatusItem from './StatusHistory/StatusItem.svelte';
 	export let statusHistory = [];

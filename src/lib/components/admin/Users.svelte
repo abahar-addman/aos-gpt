@@ -2,14 +2,14 @@
 	import { getContext, tick, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
-	import { goto } from '$app/navigation';
+	import { goto } from '$lib/utils/navigation';
 	import { user } from '$lib/stores';
 	import { page } from '$app/stores';
 
 	import UserList from './Users/UserList.svelte';
 	import Groups from './Users/Groups.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = /** @type {i18nStore} */ (getContext('i18n'));
 
 	let selectedTab;
 	$: {

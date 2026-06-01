@@ -7,7 +7,7 @@
 	dayjs.extend(relativeTime);
 
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	import { capitalizeFirstLetter, formatFileSize } from '$lib/utils';
 

@@ -4,7 +4,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Keyframes from '$lib/components/icons/Keyframes.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	export let query = '';
 	export let onSelect = (e) => {};

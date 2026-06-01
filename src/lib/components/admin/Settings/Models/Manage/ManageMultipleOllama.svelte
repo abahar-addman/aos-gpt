@@ -1,6 +1,6 @@
 <script>
 	import { getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = /** @type {i18nStore} */ (getContext('i18n'));
 
 	import ManageOllama from './ManageOllama.svelte';
 

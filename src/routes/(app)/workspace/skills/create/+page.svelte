@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { goto } from '$app/navigation';
+	import { goto } from '$lib/utils/navigation';
 	import { skills } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	import { createNewSkill, getSkills } from '$lib/apis/skills';
 	import SkillEditor from '$lib/components/workspace/Skills/SkillEditor.svelte';

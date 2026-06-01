@@ -1,11 +1,12 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { onMount, getContext } from 'svelte';
 	import { WEBUI_NAME, showSidebar, functions, mobile } from '$lib/stores';
 	import { page } from '$app/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Sidebar from '$lib/components/icons/Sidebar.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	onMount(async () => {});
 </script>
@@ -52,14 +53,14 @@
 						class="min-w-fit p-1.5 {$page.url.pathname.includes('/home/notes')
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-						href="/playground/notes">{$i18n.t('Notes')}</a
+						href="{base}/playground/notes">{$i18n.t('Notes')}</a
 					>
 
 					<a
 						class="min-w-fit p-1.5 {$page.url.pathname.includes('/playground/calendar')
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-						href="/playground/completions">{$i18n.t('Calendar')}</a
+						href="{base}/playground/completions">{$i18n.t('Calendar')}</a
 					>
 				</div>
 			</div>

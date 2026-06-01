@@ -5,7 +5,7 @@
 	import { marked } from 'marked';
 
 	import { getContext, tick, onDestroy } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	import { chatCompletion } from '$lib/apis/openai';
 

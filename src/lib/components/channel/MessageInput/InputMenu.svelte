@@ -16,7 +16,7 @@
 	import Camera from '$lib/components/icons/Camera.svelte';
 	import Clip from '$lib/components/icons/Clip.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	export let screenCaptureHandler: Function;
 	export let uploadFilesHandler: Function;

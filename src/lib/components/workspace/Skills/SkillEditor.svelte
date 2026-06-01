@@ -11,7 +11,7 @@
 	import { slugify, parseFrontmatter, formatSkillName } from '$lib/utils';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { updateSkillAccessGrants } from '$lib/apis/skills';
-	import { goto } from '$app/navigation';
+	import { goto } from '$lib/utils/navigation';
 
 	export let onSubmit: Function;
 	export let edit = false;
@@ -19,7 +19,7 @@
 	export let clone = false;
 	export let disabled = false;
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	let loading = false;
 

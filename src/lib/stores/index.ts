@@ -155,8 +155,11 @@ type OllamaModelDetails = {
 };
 
 type Settings = {
-	pinnedModels?: never[];
-	toolServers?: never[];
+	// Loosely-typed user-settings bag; many fields are read dynamically across
+	// the app. Index signature keeps known fields typed while allowing the rest.
+	[key: string]: any;
+	pinnedModels?: any[];
+	toolServers?: any[];
 	detectArtifacts?: boolean;
 	showUpdateToast?: boolean;
 	showChangelog?: boolean;
@@ -256,6 +259,9 @@ type Document = {
 };
 
 type Config = {
+	// Backend config payload; fields are added server-side over time and read
+	// dynamically. Index signature keeps known fields typed while allowing the rest.
+	[key: string]: any;
 	license_metadata: any;
 	status: boolean;
 	name: string;
@@ -264,6 +270,7 @@ type Config = {
 	default_models: string;
 	default_prompt_suggestions: PromptSuggestion[];
 	features: {
+		[key: string]: any;
 		auth: boolean;
 		auth_trusted_header: boolean;
 		enable_api_keys: boolean;

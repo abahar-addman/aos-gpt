@@ -2,7 +2,7 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { createEventDispatcher, getContext } from 'svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	import { flyAndScale } from '$lib/utils/transitions';
 

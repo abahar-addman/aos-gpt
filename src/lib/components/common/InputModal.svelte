@@ -5,7 +5,7 @@
 	import Drawer from './Drawer.svelte';
 	import RichTextInput from './RichTextInput.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	export let id = 'input-modal';
 

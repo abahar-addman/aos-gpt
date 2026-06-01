@@ -1,6 +1,6 @@
 <script>
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = /** @type {i18nStore} */ (getContext('i18n'));
 	const dispatch = createEventDispatcher();
 
 	import Spinner from '$lib/components/common/Spinner.svelte';

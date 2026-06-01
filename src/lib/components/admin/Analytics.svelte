@@ -1,11 +1,11 @@
 <script>
 	import { onMount, getContext } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { goto } from '$lib/utils/navigation';
 	import { user } from '$lib/stores';
 
 	import Dashboard from './Analytics/Dashboard.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = /** @type {i18nStore} */ (getContext('i18n'));
 
 	let loaded = false;
 

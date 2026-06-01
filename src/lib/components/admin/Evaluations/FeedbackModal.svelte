@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import { getFeedbackById } from '$lib/apis/evaluations';
 	import { toast } from 'svelte-sonner';

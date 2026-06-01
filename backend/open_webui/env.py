@@ -89,12 +89,17 @@ LOG_FORMAT = os.environ.get("LOG_FORMAT", "text").lower()
 if LOG_FORMAT not in ("text", "json"):
     LOG_FORMAT = "text"
 
-# Datadog Unified Service Tagging. These are read by ddtrace automatically and
-# we also stamp them onto every log line so service/env/version facets work in
-# the Datadog Logs UI even when running without the tracer.
+# Datadog Unified Service Tagging. Stamped onto every structured log line so
+# service/env facets work in the Datadog Logs UI when the Agent collects logs
+# from the container.
 DD_SERVICE = os.environ.get("DD_SERVICE", "edison-ai")
 DD_ENV = os.environ.get("DD_ENV", os.environ.get("ENV", "dev"))
-DD_VERSION = os.environ.get("DD_VERSION", "")
+
+# Sub-path hosting. When the app is served under a URL prefix behind a reverse
+# proxy that strips the prefix before forwarding (e.g. /edison-ai), set this so
+# FastAPI's root_path is correct and server-generated URLs/redirects carry the
+# prefix. Must match the frontend build's BASE_PATH. Empty = hosted at root.
+WEBUI_BASE_PATH = os.environ.get("WEBUI_BASE_PATH", "").rstrip("/")
 
 log = logging.getLogger(__name__)
 log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")

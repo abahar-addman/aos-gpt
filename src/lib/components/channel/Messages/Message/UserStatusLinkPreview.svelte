@@ -2,7 +2,7 @@
 	import { getContext, onMount } from 'svelte';
 	import { LinkPreview } from 'bits-ui';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 	import { getUserInfoById } from '$lib/apis/users';
 
 	import UserStatus from './UserStatus.svelte';

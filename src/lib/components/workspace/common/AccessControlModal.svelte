@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import AccessControl from './AccessControl.svelte';

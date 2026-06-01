@@ -18,7 +18,7 @@
 
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 	dayjs.extend(localizedFormat);
 
 	export let user;

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { getContext } from 'svelte';
 
@@ -25,7 +26,7 @@
 	import LinkSlash from '../icons/LinkSlash.svelte';
 	import Clipboard from '../icons/Clipboard.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	export let show = false;
 
@@ -433,7 +434,7 @@
 														'border-b'} dark:bg-gray-900 border-gray-50 dark:border-gray-850/30 text-xs"
 												>
 													<td class="px-3 py-1 w-2/3">
-														<a href="/c/{chat.id}" target="_blank">
+														<a href="{base}/c/{chat.id}" target="_blank">
 															<div class=" hover:underline line-clamp-1">
 																{chat.title}
 															</div>

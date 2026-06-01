@@ -9,7 +9,7 @@
 
 	let _skills: Record<string, any> = {};
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	onMount(async () => {
 		const res = await getSkillItems(localStorage.token).catch(() => null);

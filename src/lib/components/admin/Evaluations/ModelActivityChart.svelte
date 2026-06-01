@@ -3,7 +3,7 @@
 	import { getContext } from 'svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	export let history: Array<{ date: string; won: number; lost: number }> = [];
 	export let loading = false;

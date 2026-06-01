@@ -14,7 +14,7 @@ services:
     environment:
       - PIPELINES_API_KEY=0p3n-w3bu!
       # Pipelines runs as a distinct Datadog service from edison-ai —
-      # DD_ENV / DD_VERSION / LOG_FORMAT are inherited from the shared .env file.
+      # DD_ENV / LOG_FORMAT are inherited from the shared .env file.
       - DD_SERVICE=aos-pipelines
 
 volumes:

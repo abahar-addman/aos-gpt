@@ -1,9 +1,9 @@
 <script>
 	import { toast } from 'svelte-sonner';
 
-	import { goto } from '$app/navigation';
+	import { goto } from '$lib/utils/navigation';
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = /** @type {i18nStore} */ (getContext('i18n'));
 
 	import { user } from '$lib/stores';
 	import { createNewKnowledge } from '$lib/apis/knowledge';

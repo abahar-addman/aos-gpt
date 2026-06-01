@@ -36,7 +36,11 @@ COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile || bun install
 
 COPY . .
+# Sub-path hosting: bake the URL prefix into the static build (empty = root).
+# Must match the backend's WEBUI_BASE_PATH at runtime.
+ARG BASE_PATH=""
 ENV APP_BUILD_HASH=${BUILD_HASH}
+ENV BASE_PATH=${BASE_PATH}
 RUN bun run build
 
 ######## WebUI backend ########

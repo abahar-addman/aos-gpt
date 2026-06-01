@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	import { DEFAULT_PERMISSIONS } from '$lib/constants/permissions';
 
-	export let permissions = {};
-	export let defaultPermissions = {};
+	export let permissions: Record<string, any> = {};
+	export let defaultPermissions: Record<string, any> = {};
 
 	// Reactive statement to ensure all fields are present in `permissions`
 	$: {

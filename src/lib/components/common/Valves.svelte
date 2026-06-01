@@ -1,13 +1,15 @@
 <script>
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
-	const i18n = getContext('i18n');
+	const i18n = /** @type {i18nStore} */ (getContext('i18n'));
 
 	import Switch from './Switch.svelte';
 	import SensitiveInput from './SensitiveInput.svelte';
 	import MapSelector from './Valves/MapSelector.svelte';
 
+	/** @type {any} */
 	export let valvesSpec = null;
+	/** @type {Record<string, any>} */
 	export let valves = {};
 </script>
 

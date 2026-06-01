@@ -9,7 +9,7 @@
 
 	export let selectedToolIds = [];
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	onMount(() => {
 		// Filter out OAuth2.1 MCP tools - these cannot be set as model defaults

@@ -5,9 +5,10 @@
 
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import { fade } from 'svelte/transition';
-	const i18n: Writable<i18nType> = getContext('i18n');
+	const i18n: Writable<i18nType> = getContext<i18nStore>('i18n');
 
-	import { goto } from '$app/navigation';
+	import { goto } from '$lib/utils/navigation';
+	import { base } from '$app/paths';
 	import { page } from '$app/stores';
 
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
@@ -592,7 +593,7 @@
 		audioQueue.set(new AudioQueue(document.getElementById('audioElement')));
 
 		pageSubscribe = page.subscribe(async (p) => {
-			if (p.url.pathname === '/') {
+			if (p.url.pathname === `${base}/`) {
 				await tick();
 				initNewChat();
 			}

@@ -1,9 +1,10 @@
 <script>
-	import { goto } from '$app/navigation';
+	import { goto } from '$lib/utils/navigation';
+	import { base } from '$app/paths';
 	import { WEBUI_NAME, config } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = /** @type {i18nStore} */ (getContext('i18n'));
 
 	let loaded = false;
 
@@ -47,7 +48,7 @@
 						<button
 							class="relative z-20 flex px-5 py-2 rounded-full bg-gray-100 hover:bg-gray-200 transition font-medium text-sm text-black"
 							on:click={() => {
-								location.href = '/';
+								location.href = `${base}/`;
 							}}
 						>
 							{$i18n.t('Check Again')}

@@ -3,6 +3,10 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+      args:
+        # Hosted under https://aos.addmangroup.com/edison-ai/ behind a prefix-stripping
+        # proxy. Must match WEBUI_BASE_PATH in .env.production. Override to "" for root.
+        BASE_PATH: ${BASE_PATH-/edison-ai}
     image: addmangroup/edison-ai:latest
     container_name: edison-ai
     volumes:

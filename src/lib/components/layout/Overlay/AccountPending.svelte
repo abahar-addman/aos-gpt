@@ -3,10 +3,11 @@
 	import { marked } from 'marked';
 
 	import { getAdminDetails } from '$lib/apis/auths';
+	import { base } from '$app/paths';
 	import { onMount, tick, getContext } from 'svelte';
 	import { config } from '$lib/stores';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	let adminDetails = null;
 
@@ -63,7 +64,7 @@
 					<button
 						class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 text-gray-700 transition font-medium text-sm"
 						on:click={async () => {
-							location.href = '/';
+							location.href = `${base}/`;
 						}}
 					>
 						{$i18n.t('Check Again')}
@@ -73,7 +74,7 @@
 						class="text-xs text-center w-full mt-2 text-gray-400 underline"
 						on:click={async () => {
 							localStorage.removeItem('token');
-							location.href = '/auth';
+							location.href = `${base}/auth`;
 						}}>{$i18n.t('Sign Out')}</button
 					>
 				</div>

@@ -32,9 +32,10 @@
 		channels,
 		channelId
 	} from '$lib/stores';
-	import { goto } from '$app/navigation';
+	import { goto } from '$lib/utils/navigation';
+	import { base } from '$app/paths';
 	import { page } from '$app/stores';
-	import { beforeNavigate } from '$app/navigation';
+	import { beforeNavigate } from '$lib/utils/navigation';
 	import { updated } from '$app/state';
 
 	import i18n, { initI18n } from '$lib/i18n';
@@ -97,12 +98,14 @@
 	const BREAKPOINT = 768;
 
 	const setupSocket = async (enableWebsocket) => {
-		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
+		const _socket = io(undefined, {
 			reconnection: true,
 			reconnectionDelay: 1000,
 			reconnectionDelayMax: 5000,
 			randomizationFactor: 0.5,
-			path: '/ws/socket.io',
+			// Base path must live in `path`, not the URL arg — socket.io treats a
+			// leading-slash string as a namespace, not a path prefix.
+			path: `${WEBUI_BASE_URL}/ws/socket.io`,
 			transports: enableWebsocket ? ['websocket'] : ['polling', 'websocket'],
 			auth: { token: localStorage.token }
 		});
@@ -358,7 +361,7 @@
 					if ($settings?.notificationSoundAlways ?? false) {
 						playingNotificationSound.set(true);
 
-						const audio = new Audio(`/audio/notification.mp3`);
+						const audio = new Audio(`${WEBUI_BASE_URL}/audio/notification.mp3`);
 						audio.play().finally(() => {
 							// Ensure the global state is reset after the sound finishes
 							playingNotificationSound.set(false);
@@ -607,7 +610,7 @@
 			user.set(null);
 			localStorage.removeItem('token');
 
-			location.href = res?.redirect_url ?? '/auth';
+			location.href = res?.redirect_url ?? `${base}/auth`;
 		}
 	};
 
@@ -775,6 +778,18 @@
 				const currentUrl = `${window.location.pathname}${window.location.search}`;
 				const encodedUrl = encodeURIComponent(currentUrl);
 
+				// SSO/OAuth logins deliver the JWT via a non-httponly `token` cookie
+				// (set by the backend OAuth callback). Bridge it into localStorage so the
+				// session bootstrap below consumes it — otherwise we'd bounce back to /auth.
+				if (!localStorage.token) {
+					const tokenCookie = document.cookie
+						.split('; ')
+						.find((c) => c.startsWith('token='));
+					if (tokenCookie) {
+						localStorage.token = decodeURIComponent(tokenCookie.slice('token='.length));
+					}
+				}
+
 				if (localStorage.token) {
 					// Get Session User Info
 					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
@@ -785,6 +800,13 @@
 					if (sessionUser) {
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
+
+						// If an SSO cookie login landed us on /auth, continue into the app.
+						if ($page.url.pathname === `${base}/auth`) {
+							const dest = localStorage.getItem('redirectPath') || '/';
+							localStorage.removeItem('redirectPath');
+							await goto(dest);
+						}
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
@@ -793,7 +815,7 @@
 				} else {
 					// Don't redirect if we're already on the auth page
 					// Needed because we pass in tokens from OAuth logins via URL fragments
-					if ($page.url.pathname !== '/auth') {
+					if ($page.url.pathname !== `${base}/auth`) {
 						await goto(`/auth?redirect=${encodedUrl}`);
 					}
 				}
@@ -821,7 +843,7 @@
 
 			document.getElementById('splash-screen')?.remove();
 
-			const audio = new Audio(`/audio/greeting.mp3`);
+			const audio = new Audio(`${WEBUI_BASE_URL}/audio/greeting.mp3`);
 			const playAudio = () => {
 				audio.play();
 				document.removeEventListener('click', playAudio);
@@ -869,7 +891,7 @@
 		rel="search"
 		type="application/opensearchdescription+xml"
 		title={$WEBUI_NAME}
-		href="/opensearch.xml"
+		href="{base}/opensearch.xml"
 		crossorigin="use-credentials"
 	/>
 </svelte:head>

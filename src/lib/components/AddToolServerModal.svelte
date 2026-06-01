@@ -6,7 +6,7 @@
 
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	import { settings } from '$lib/stores';
 	import Modal from '$lib/components/common/Modal.svelte';

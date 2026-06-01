@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { getContext, createEventDispatcher, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
+	import { goto } from '$lib/utils/navigation';
 
 	import { createNewChannel, deleteChannelById } from '$lib/apis/channels';
 	import { user } from '$lib/stores';

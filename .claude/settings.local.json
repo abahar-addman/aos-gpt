@@ -32,7 +32,12 @@
       "Bash(bash -n backend/start.sh)",
       "Bash(psql *)",
       "Bash(backend/venv/Scripts/python.exe *)",
-      "Bash(git diff *)"
+      "Bash(git diff *)",
+      "mcp__claude_ai_policy-gate__auto_identify",
+      "mcp__claude_ai_policy-gate__check_policy_status",
+      "Bash(timeout 360 bun run check)",
+      "Bash(bun run *)",
+      "Bash(BASE_PATH=/edison-ai timeout 500 bun run build)"
     ]
   }
 }

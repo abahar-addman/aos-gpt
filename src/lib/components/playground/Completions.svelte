@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 
-	import { goto } from '$app/navigation';
+	import { goto } from '$lib/utils/navigation';
 	import { onMount, tick, getContext } from 'svelte';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -12,7 +12,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	let loaded = false;
 	let text = '';

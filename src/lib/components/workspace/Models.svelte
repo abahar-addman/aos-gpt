@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { base } from '$app/paths';
 	import { marked } from 'marked';
 
 	import { toast } from 'svelte-sonner';
@@ -8,8 +9,8 @@
 	const { saveAs } = fileSaver;
 
 	import { onMount, getContext, tick } from 'svelte';
-	import { goto } from '$app/navigation';
-	const i18n = getContext('i18n');
+	import { goto } from '$lib/utils/navigation';
+	const i18n = getContext<i18nStore>('i18n');
 
 	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
@@ -374,7 +375,7 @@
 				{/if}
 				<a
 					class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
-					href="/workspace/models/create"
+					href="{base}/workspace/models/create"
 				>
 					<Plus className="size-3" strokeWidth="2.5" />
 

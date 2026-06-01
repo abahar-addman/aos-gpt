@@ -4,7 +4,7 @@
 	import { onMount, getContext, createEventDispatcher, onDestroy, tick } from 'svelte';
 	import * as FocusTrap from 'focus-trap';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 	const dispatch = createEventDispatcher();
 
 	import { fade } from 'svelte/transition';

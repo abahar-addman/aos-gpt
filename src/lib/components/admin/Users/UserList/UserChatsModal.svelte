@@ -14,7 +14,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ChatsModal from '$lib/components/layout/ChatsModal.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	export let show = false;
 	export let user;

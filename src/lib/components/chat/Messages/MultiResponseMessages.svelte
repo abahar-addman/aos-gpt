@@ -19,7 +19,7 @@
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import ProfileImage from './ProfileImage.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 	dayjs.extend(localizedFormat);
 
 	export let chatId;

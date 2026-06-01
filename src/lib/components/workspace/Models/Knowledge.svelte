@@ -13,7 +13,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	export let selectedItems = [];
-	const i18n = getContext('i18n');
+	const i18n = getContext<i18nStore>('i18n');
 
 	let loaded = false;
 
