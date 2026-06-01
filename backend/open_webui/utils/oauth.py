@@ -70,7 +70,7 @@ from open_webui.env import (
     ENABLE_OAUTH_EMAIL_FALLBACK,
     OAUTH_CLIENT_INFO_ENCRYPTION_KEY,
 )
-from open_webui.utils.misc import parse_duration
+from open_webui.utils.misc import parse_duration, generate_initials_image_data_url
 from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.groups import apply_default_group_assignment
@@ -1337,6 +1337,38 @@ class OAuthManager:
                     db=db,
                 )
 
+    def _resolve_user_name(self, user_data: dict, email: str) -> str:
+        """Resolve a display name from OAuth/OIDC claims.
+
+        Tries the configured username claim first, then falls back through the
+        common OIDC name claims. Keycloak frequently omits the composite `name`
+        claim (unless a "full name" mapper is configured) while still providing
+        `given_name`/`family_name`/`preferred_username`, so we compose a name
+        from those rather than dropping straight to the email address.
+        """
+        username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
+
+        name = user_data.get(username_claim)
+        if name:
+            return str(name).strip()
+
+        given = (user_data.get("given_name") or "").strip()
+        family = (user_data.get("family_name") or "").strip()
+        full = f"{given} {family}".strip()
+        if full:
+            return full
+
+        for claim in ("name", "preferred_username", "nickname"):
+            value = user_data.get(claim)
+            if value:
+                return str(value).strip()
+
+        log.warning(
+            f"Could not resolve a name from OAuth claims (tried '{username_claim}', "
+            "given_name/family_name, preferred_username); using email as name."
+        )
+        return email
+
     async def _process_picture_url(
         self, picture_url: str, access_token: str = None
     ) -> str:
@@ -1552,6 +1584,15 @@ class OAuthManager:
                         processed_picture_url = await self._process_picture_url(
                             new_picture_url, token.get("access_token")
                         )
+                        # Don't clobber an existing avatar with the unresolved
+                        # "/user.png" fallback when the provider has no picture.
+                        if processed_picture_url == "/user.png":
+                            processed_picture_url = (
+                                user.profile_image_url
+                                if user.profile_image_url
+                                and user.profile_image_url != "/user.png"
+                                else generate_initials_image_data_url(user.name)
+                            )
                         if processed_picture_url != user.profile_image_url:
                             Users.update_user_profile_image_url_by_id(
                                 user.id, processed_picture_url, db=db
@@ -1576,12 +1617,14 @@ class OAuthManager:
                         )
                     else:
                         picture_url = "/user.png"
-                    username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
+                    name = self._resolve_user_name(user_data, email)
 
-                    name = user_data.get(username_claim)
-                    if not name:
-                        log.warning("Username claim is missing, using email as name")
-                        name = email
+                    # If the provider supplied no usable picture (e.g. Keycloak
+                    # without a picture claim), generate an initials avatar
+                    # server-side instead of the bare "/user.png" path, which
+                    # does not resolve under sub-path / proxied deployments.
+                    if picture_url == "/user.png":
+                        picture_url = generate_initials_image_data_url(name)
 
                     user = Auths.insert_new_auth(
                         email=email,

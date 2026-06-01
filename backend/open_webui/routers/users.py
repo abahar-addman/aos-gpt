@@ -40,6 +40,7 @@ from open_webui.utils.auth import (
     validate_password,
 )
 from open_webui.utils.access_control import get_permissions, has_permission
+from open_webui.utils.misc import generate_initials_image_data_url
 
 log = logging.getLogger(__name__)
 
@@ -545,6 +546,24 @@ def get_user_profile_image_by_id(user_id: str, user=Depends(get_verified_user)):
                     )
                 except Exception as e:
                     pass
+
+        # No usable stored image (e.g. legacy users left on "/user.png" or an
+        # empty value): generate an initials avatar from the user's name on the
+        # fly so every user gets a branded icon without a re-login or migration.
+        try:
+            data_url = generate_initials_image_data_url(user.name)
+            if data_url.startswith("data:image"):
+                header, base64_data = data_url.split(",", 1)
+                image_buffer = io.BytesIO(base64.b64decode(base64_data))
+                media_type = header.split(";")[0].lstrip("data:")
+                return StreamingResponse(
+                    image_buffer,
+                    media_type=media_type,
+                    headers={"Content-Disposition": "inline"},
+                )
+        except Exception:
+            pass
+
         return FileResponse(f"{STATIC_DIR}/user.png")
     else:
         raise HTTPException(

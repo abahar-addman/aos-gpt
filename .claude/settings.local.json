@@ -37,7 +37,8 @@
       "mcp__claude_ai_policy-gate__check_policy_status",
       "Bash(timeout 360 bun run check)",
       "Bash(bun run *)",
-      "Bash(BASE_PATH=/edison-ai timeout 500 bun run build)"
+      "Bash(BASE_PATH=/edison-ai timeout 500 bun run build)",
+      "Read(//c/Users/ali.bahar/Downloads/**)"
     ]
   }
 }

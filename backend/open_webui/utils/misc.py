@@ -468,6 +468,73 @@ def get_gravatar_url(email):
     return f"https://www.gravatar.com/avatar/{hash_hex}?d=mp"
 
 
+def get_initials(name: str) -> str:
+    """Extract up to two uppercase initials from a display name.
+
+    Mirrors the frontend `generateInitialsImage` logic: first letter of the
+    first word plus the first letter of the last word (if more than one word).
+    """
+    sanitized = (name or "").strip()
+    if not sanitized:
+        return ""
+
+    parts = sanitized.split()
+    if len(parts) > 1:
+        return (parts[0][0] + parts[-1][0]).upper()
+    return parts[0][0].upper()
+
+
+def generate_initials_image_data_url(name: str) -> str:
+    """Generate an initials avatar server-side and return it as a base64 data URL.
+
+    This is the backend counterpart to the frontend `generateInitialsImage`
+    canvas helper, used for flows (e.g. OAuth/SSO sign-up) where no client-side
+    canvas is available. Returns a `data:image/png;base64,...` string so the
+    avatar renders independently of static-file/base-path serving. Falls back to
+    "/user.png" if image generation fails for any reason.
+    """
+    try:
+        import base64 as _base64
+        import io as _io
+        from PIL import Image, ImageDraw, ImageFont
+
+        from open_webui.env import STATIC_DIR
+
+        size = 100
+        # Matches the frontend palette: orange background, white text.
+        image = Image.new("RGB", (size, size), "#F39C12")
+        draw = ImageDraw.Draw(image)
+
+        initials = get_initials(name)
+
+        font = None
+        font_path = Path(STATIC_DIR) / "fonts" / "NotoSans-Bold.ttf"
+        try:
+            if font_path.exists():
+                font = ImageFont.truetype(str(font_path), 40)
+        except Exception:
+            font = None
+        if font is None:
+            font = ImageFont.load_default()
+
+        if initials:
+            # Center the text using its bounding box.
+            bbox = draw.textbbox((0, 0), initials, font=font)
+            text_w = bbox[2] - bbox[0]
+            text_h = bbox[3] - bbox[1]
+            x = (size - text_w) / 2 - bbox[0]
+            y = (size - text_h) / 2 - bbox[1]
+            draw.text((x, y), initials, fill="#FFFFFF", font=font)
+
+        buffer = _io.BytesIO()
+        image.save(buffer, format="PNG")
+        encoded = _base64.b64encode(buffer.getvalue()).decode("utf-8")
+        return f"data:image/png;base64,{encoded}"
+    except Exception as e:
+        log.error(f"Failed to generate initials avatar for '{name}': {e}")
+        return "/user.png"
+
+
 def calculate_sha256(file_path, chunk_size):
     # Compute SHA-256 hash of a file efficiently in chunks
     sha256 = hashlib.sha256()
