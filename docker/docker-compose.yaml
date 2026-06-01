@@ -1,16 +1,16 @@
 services:
-  aos-gpt:
+  edison-ai:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: addmangroup/aos-gpt:latest
-    container_name: aos-gpt
+    image: addmangroup/edison-ai:latest
+    container_name: edison-ai
     volumes:
-      - aos-gpt:/app/backend/data
+      - edison-ai:/app/backend/data
     ports:
       - ${OPEN_WEBUI_PORT-1776}:1776
     env_file:
-      - ../.env
+      - ../.env.production
     environment:
       # Defaults (only used if not set in .env)
       - CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN-*}
@@ -22,32 +22,19 @@ services:
       - host.docker.internal:host-gateway
     restart: unless-stopped
 
-  pipelines:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile.pipelines
-    image: addmangroup/aos-pipelines:latest
-    volumes:
-      - pipelines:/app/pipelines
-    restart: unless-stopped
-    ports:
-      - ${PIPELINES_PORT-9099}:9099
-    env_file:
-      - ../.env
-    environment:
-      - PIPELINES_API_KEY=0p3n-w3bu!
-      # Override DD_SERVICE so the pipelines container shows up as a distinct
-      # Datadog service from aos-gpt — DD_ENV / DD_VERSION / LOG_FORMAT are
-      # inherited from the shared .env file.
-      - DD_SERVICE=aos-pipelines
-
 volumes:
-  aos-gpt: {}
-  pipelines: {}
+  edison-ai: {}
 
 
+# This compose builds/pushes ONLY the app image (addmangroup/edison-ai).
+# Pipelines is hosted independently and lives in docker-compose.pipelines.yaml,
+# so the commands below never rebuild or overwrite the live pipelines image.
+#
 # Usage:
 #   Build locally:  docker compose -f docker/docker-compose.yaml build
 #   Push to hub:    docker compose -f docker/docker-compose.yaml push
 #   Build & push:   docker compose -f docker/docker-compose.yaml build && docker compose -f docker/docker-compose.yaml push
 #   Run:            docker compose -f docker/docker-compose.yaml up -d
+#
+# Run the full stack (app + pipelines) locally:
+#   docker compose -f docker/docker-compose.yaml -f docker/docker-compose.pipelines.yaml up -d

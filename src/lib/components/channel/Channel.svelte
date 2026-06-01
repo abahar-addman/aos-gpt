@@ -284,10 +284,10 @@
 					} else {
 						return e.name;
 					}
-				}, '')} • AOS-GPT </title
+				}, '')} • Edison AI </title
 		>
 	{:else}
-		<title>#{channel?.name ?? 'Channel'} • AOS-GPT</title>
+		<title>#{channel?.name ?? 'Channel'} • Edison AI</title>
 	{/if}
 </svelte:head>
 

@@ -92,7 +92,7 @@ if LOG_FORMAT not in ("text", "json"):
 # Datadog Unified Service Tagging. These are read by ddtrace automatically and
 # we also stamp them onto every log line so service/env/version facets work in
 # the Datadog Logs UI even when running without the tracer.
-DD_SERVICE = os.environ.get("DD_SERVICE", "aos-gpt")
+DD_SERVICE = os.environ.get("DD_SERVICE", "edison-ai")
 DD_ENV = os.environ.get("DD_ENV", os.environ.get("ENV", "dev"))
 DD_VERSION = os.environ.get("DD_VERSION", "")
 
@@ -105,9 +105,9 @@ if "cuda_error" in locals():
 
 SRC_LOG_LEVELS = {}  # Legacy variable, do not remove
 
-WEBUI_NAME = os.environ.get("WEBUI_NAME", "AOS-GPT")
-if WEBUI_NAME != "AOS-GPT":
-    WEBUI_NAME += " (AOS-GPT)"
+WEBUI_NAME = os.environ.get("WEBUI_NAME", "Edison AI")
+if WEBUI_NAME != "Edison AI":
+    WEBUI_NAME += " (Edison AI)"
 
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
 

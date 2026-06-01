@@ -25,6 +25,9 @@ export default defineConfig({
 			'/cache': {
 				target: 'http://localhost:8080',
 			},
+			'/oauth': {
+				target: 'http://localhost:8080',
+			},
 		}
 	},
 	plugins: [

@@ -1,0 +1,35 @@
+services:
+  pipelines:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.pipelines
+    image: addmangroup/aos-pipelines:latest
+    volumes:
+      - pipelines:/app/pipelines
+    restart: unless-stopped
+    ports:
+      - ${PIPELINES_PORT-9099}:9099
+    env_file:
+      - ../.env
+    environment:
+      - PIPELINES_API_KEY=0p3n-w3bu!
+      # Pipelines runs as a distinct Datadog service from edison-ai —
+      # DD_ENV / DD_VERSION / LOG_FORMAT are inherited from the shared .env file.
+      - DD_SERVICE=aos-pipelines
+
+volumes:
+  pipelines: {}
+
+
+# Pipelines is hosted independently in its own environment. It is intentionally
+# kept OUT of docker-compose.yaml so that building/pushing the app
+# (addmangroup/edison-ai) never rebuilds or overwrites the live pipelines image.
+#
+# Usage (only when you explicitly intend to ship pipelines):
+#   Build locally:  docker compose -f docker/docker-compose.pipelines.yaml build
+#   Push to hub:    docker compose -f docker/docker-compose.pipelines.yaml push
+#   Build & push:   docker compose -f docker/docker-compose.pipelines.yaml build && docker compose -f docker/docker-compose.pipelines.yaml push
+#   Run:            docker compose -f docker/docker-compose.pipelines.yaml up -d
+#
+# Run the full stack (app + pipelines) locally:
+#   docker compose -f docker/docker-compose.yaml -f docker/docker-compose.pipelines.yaml up -d

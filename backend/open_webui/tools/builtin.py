@@ -1,5 +1,5 @@
 """
-Built-in tools for AOS-GPT.
+Built-in tools for Edison AI.
 
 These tools are automatically available when native function calling is enabled.
 

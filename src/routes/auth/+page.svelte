@@ -173,7 +173,7 @@
 
 				<!-- Hero -->
 				<div class="mb-8">
-					<h1 class="text-4xl font-bold tracking-tight mb-2">AOS-GPT</h1>
+					<h1 class="text-4xl font-bold tracking-tight mb-2">Edison AI</h1>
 					<p class="text-lg text-gray-300 font-medium">Secure AI Tools for Manufacturing</p>
 					<p class="mt-4 text-sm text-gray-400 leading-relaxed max-w-md">
 						A safe and secure environment to interact with AI development tools at Addman.
@@ -292,7 +292,7 @@
 							e.target.style.display = 'none';
 						}}
 					/>
-					<span class="text-2xl font-bold text-gray-900 dark:text-white">AOS-GPT</span>
+					<span class="text-2xl font-bold text-gray-900 dark:text-white">Edison AI</span>
 				</div>
 				<p class="text-sm text-gray-500 dark:text-gray-400">
 					Secure AI Tools for Manufacturing
@@ -311,9 +311,9 @@
 					</h2>
 					<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
 						{#if mode === 'signin'}
-							Sign in to continue to AOS-GPT
+							Sign in to continue to Edison AI
 						{:else}
-							Get started with AOS-GPT
+							Get started with Edison AI
 						{/if}
 					</p>
 				</div>
@@ -413,7 +413,7 @@
 						href="{WEBUI_BASE_URL}/oauth/oidc/login"
 						class="flex w-full items-center justify-center rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2.5 text-sm font-medium text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 					>
-						{$i18n.t('Sign in with {{provider}}', { provider: $config.oauth.providers.oidc })}
+						{$i18n.t('Sign in with SSO')}
 					</a>
 				{/if}
 
@@ -443,7 +443,7 @@
 
 				<!-- Footer -->
 				<div class="mt-10 text-center text-xs text-gray-400 dark:text-gray-600">
-					Powered by AOS-GPT &middot; Addman
+					Powered by Edison AI &middot; Addman
 				</div>
 			</div>
 		</div>
