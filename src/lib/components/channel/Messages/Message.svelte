@@ -11,13 +11,17 @@
 	dayjs.extend(localizedFormat);
 
 	import { getContext, onMount } from 'svelte';
+	import { toast } from 'svelte-sonner';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
+	import { base } from '$app/paths';
+	import { goto } from '$lib/utils/navigation';
 	import { formatDate } from '$lib/utils';
 
 	import { settings, user, shortCodesToEmojis } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { getMessageData } from '$lib/apis/channels';
+	import { cloneSharedChatById } from '$lib/apis/chats';
 
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
@@ -29,6 +33,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Image from '$lib/components/common/Image.svelte';
 	import FileItem from '$lib/components/common/FileItem.svelte';
+	import Link from '$lib/components/icons/Link.svelte';
 	import ProfilePreview from './Message/ProfilePreview.svelte';
 	import ChatBubbleOvalEllipsis from '$lib/components/icons/ChatBubble.svelte';
 	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
@@ -64,6 +69,26 @@
 	let edit = false;
 	let editedContent = null;
 	let showDeleteConfirmDialog = false;
+
+	let forking = false;
+
+	// Fork (clone) a chat shared into this channel into the current user's own chats.
+	const forkSharedChat = async () => {
+		const sharedChat = message?.data?.shared_chat;
+		if (!sharedChat?.share_id || forking) return;
+		forking = true;
+
+		const res = await cloneSharedChatById(localStorage.token, sharedChat.share_id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		forking = false;
+
+		if (res) {
+			goto(`/c/${res.id}`);
+		}
+	};
 
 	const loadMessageData = async () => {
 		if (message && message?.data) {
@@ -368,6 +393,39 @@
 								{/if}
 							</div>
 						{/each}
+					</div>
+				{/if}
+
+				{#if message?.data?.shared_chat}
+					{@const sharedChat = message.data.shared_chat}
+					<div class="my-2 max-w-md">
+						<div
+							class="flex flex-col gap-2 p-3 rounded-2xl border border-gray-100 dark:border-gray-850 bg-gray-50 dark:bg-gray-850/50"
+						>
+							<div class="flex items-center gap-2">
+								<Link className="size-4 shrink-0" />
+								<div class=" text-sm font-medium line-clamp-1">
+									{sharedChat.title || $i18n.t('Shared chat')}
+								</div>
+							</div>
+							<div class="flex gap-1.5">
+								<a
+									href="{base}/s/{sharedChat.share_id}"
+									target="_blank"
+									class="px-3 py-1.5 text-xs font-medium bg-gray-900 dark:bg-white text-white dark:text-black hover:opacity-90 transition rounded-full"
+								>
+									{$i18n.t('Open')}
+								</a>
+								<button
+									type="button"
+									class="px-3 py-1.5 text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 transition rounded-full disabled:opacity-50"
+									disabled={forking}
+									on:click={forkSharedChat}
+								>
+									{forking ? $i18n.t('Forking...') : $i18n.t('Fork')}
+								</button>
+							</div>
+						</div>
 					</div>
 				{/if}
 

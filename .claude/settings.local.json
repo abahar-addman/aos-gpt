@@ -42,7 +42,8 @@
       "Bash(cd /c/Users/ali.bahar/Documents/gitHub/aos-gpt)",
       "Bash(find src *)",
       "Bash(git config *)",
-      "Bash(git --version)"
+      "Bash(git --version)",
+      "Bash(npx svelte-check *)"
     ]
   }
 }

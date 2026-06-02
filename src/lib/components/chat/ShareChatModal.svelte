@@ -4,6 +4,7 @@
 
 	import { toast } from 'svelte-sonner';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
+	import { getChannels, sendMessage } from '$lib/apis/channels';
 	import { copyToClipboard } from '$lib/utils';
 
 	import Modal from '../common/Modal.svelte';
@@ -14,7 +15,57 @@
 
 	let chat = null;
 	let shareUrl = null;
+
+	let channels = [];
+	let selectedChannelId = '';
+	let sharingToChannel = false;
+
 	const i18n = getContext<i18nStore>('i18n');
+
+	onMount(async () => {
+		channels = (await getChannels(localStorage.token).catch(() => [])) ?? [];
+	});
+
+	// Ensure the chat has a share link, then post it into the selected channel as a
+	// read-only, forkable card. Reuses the existing share + clone infrastructure.
+	const shareToChannel = async () => {
+		if (!selectedChannelId || !chat) return;
+		sharingToChannel = true;
+
+		const sharedChat = await shareChatById(localStorage.token, chatId).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (!sharedChat) {
+			sharingToChannel = false;
+			return;
+		}
+
+		const shareId = sharedChat.id;
+		const title = chat?.title ?? sharedChat?.title ?? $i18n.t('Shared chat');
+
+		const res = await sendMessage(localStorage.token, selectedChannelId, {
+			content: $i18n.t('Shared a chat in this channel.'),
+			data: {
+				shared_chat: {
+					share_id: shareId,
+					title
+				}
+			}
+		}).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		sharingToChannel = false;
+
+		if (res) {
+			chat = await getChatById(localStorage.token, chatId);
+			toast.success($i18n.t('Shared chat to channel'));
+			show = false;
+		}
+	};
 
 	const shareLocalChat = async () => {
 		const _chat = chat;
@@ -95,6 +146,35 @@
 						)}
 					{/if}
 				</div>
+
+				{#if channels.length > 0}
+					<div class="flex flex-col gap-1 mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+						<div class=" text-sm dark:text-gray-300">
+							{$i18n.t(
+								'Share this chat to a channel. Members can view it (read-only) and fork their own copy.'
+							)}
+						</div>
+						<div class="flex gap-2 mt-1">
+							<select
+								class="w-full text-sm rounded-lg px-3 py-2 bg-gray-50 dark:bg-gray-850 dark:text-gray-100 outline-hidden"
+								bind:value={selectedChannelId}
+							>
+								<option value="" disabled selected>{$i18n.t('Select a channel')}</option>
+								{#each channels as channel}
+									<option value={channel.id}>{channel.name || $i18n.t('Direct message')}</option>
+								{/each}
+							</select>
+							<button
+								class="shrink-0 self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full disabled:opacity-50"
+								type="button"
+								disabled={!selectedChannelId || sharingToChannel}
+								on:click={shareToChannel}
+							>
+								{sharingToChannel ? $i18n.t('Sharing...') : $i18n.t('Share to channel')}
+							</button>
+						</div>
+					</div>
+				{/if}
 
 				<div class="flex justify-end">
 					<div class="flex flex-col items-end space-x-1 mt-3">
