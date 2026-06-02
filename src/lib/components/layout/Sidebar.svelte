@@ -700,26 +700,27 @@
 			}}
 		>
 			<div class="pb-1.5">
-				<Tooltip
-					content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
-					placement="right"
-				>
-					<button
-						class="flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group {isWindows
-							? 'cursor-pointer'
-							: 'cursor-[e-resize]'}"
-						aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+				<Tooltip content={$i18n.t('Home')} placement="right">
+					<a
+						class="flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition group cursor-pointer"
+						href="/home"
+						data-sveltekit-reload
+						draggable="false"
+						on:click={(e) => {
+							// Route to the root /home page; don't let the click bubble
+							// up to the surrounding "open sidebar" toggle button.
+							e.stopImmediatePropagation();
+						}}
+						aria-label={$i18n.t('Home')}
 					>
 						<div class=" self-center flex items-center justify-center size-9">
 							<img
 								src="{WEBUI_BASE_URL}/static/favicon.png"
-								class="sidebar-new-chat-icon size-6 rounded-full group-hover:hidden"
+								class="sidebar-new-chat-icon size-6 rounded-full"
 								alt=""
 							/>
-
-							<Sidebar className="size-5 hidden group-hover:flex" />
 						</div>
-					</button>
+					</a>
 				</Tooltip>
 			</div>
 
@@ -901,9 +902,10 @@
 			>
 				<a
 					class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100/50 dark:hover:bg-gray-850/50 transition no-drag-region"
-					href="{base}/"
+					href="/home"
+					data-sveltekit-reload
 					draggable="false"
-					on:click={newChatHandler}
+					aria-label={$i18n.t('Home')}
 				>
 					<img
 						crossorigin="anonymous"

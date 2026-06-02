@@ -38,7 +38,11 @@
       "Bash(timeout 360 bun run check)",
       "Bash(bun run *)",
       "Bash(BASE_PATH=/edison-ai timeout 500 bun run build)",
-      "Read(//c/Users/ali.bahar/Downloads/**)"
+      "Read(//c/Users/ali.bahar/Downloads/**)",
+      "Bash(cd /c/Users/ali.bahar/Documents/gitHub/aos-gpt)",
+      "Bash(find src *)",
+      "Bash(git config *)",
+      "Bash(git --version)"
     ]
   }
 }
