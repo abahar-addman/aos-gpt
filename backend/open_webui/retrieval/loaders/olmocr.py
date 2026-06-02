@@ -20,6 +20,19 @@ OCR_PROMPT = (
     "Preserve the original structure and formatting as much as possible."
 )
 
+# Qwen2.5-VL based models (olmocr2) use M-RoPE, for which Ollama cannot shift the
+# KV cache: if the prompt + generation exceeds num_ctx the llama runner aborts with
+# `GGML_ASSERT(n_pos_per_embd() == 1)` and returns a 500. To stay safely inside the
+# context window we (a) cap the rendered page so the image stays well under the
+# model's max vision-token budget, and (b) request a generous num_ctx with headroom
+# for the generated text. Both are tunable via OlmOCRLoader kwargs.
+DEFAULT_MAX_IMAGE_DIM = 1536  # longest side, in pixels
+DEFAULT_NUM_CTX = 8192
+# Cap generated tokens so a single page can't run away and fill the whole context
+# window (which is both slow and risks the M-RoPE shift). Leaves headroom under
+# num_ctx for the ~2k image tokens + prompt. A dense page rarely exceeds this.
+DEFAULT_NUM_PREDICT = 4096
+
 
 class OlmOCRLoader:
     """
@@ -36,8 +49,11 @@ class OlmOCRLoader:
         base_url: str,
         model: str,
         file_path: str,
-        timeout: int = 120,
+        timeout: int = 300,
         max_retries: int = 3,
+        max_image_dim: int = DEFAULT_MAX_IMAGE_DIM,
+        num_ctx: int = DEFAULT_NUM_CTX,
+        num_predict: int = DEFAULT_NUM_PREDICT,
     ):
         if not base_url:
             raise ValueError("Ollama base URL cannot be empty.")
@@ -49,6 +65,9 @@ class OlmOCRLoader:
         self.file_path = file_path
         self.timeout = timeout
         self.max_retries = max_retries
+        self.max_image_dim = max_image_dim
+        self.num_ctx = num_ctx
+        self.num_predict = num_predict
 
         self.file_name = os.path.basename(file_path)
         self.file_size = os.path.getsize(file_path)
@@ -70,8 +89,13 @@ class OlmOCRLoader:
         doc = fitz.open(self.file_path)
         try:
             for page in doc:
-                # 300 DPI: matrix scale factor = 300/72 ~ 4.17
-                mat = fitz.Matrix(300 / 72, 300 / 72)
+                # Scale so the page's longest side ~= max_image_dim. This bounds the
+                # vision-token count and keeps us inside num_ctx (see module note).
+                # Cap the zoom at ~300 DPI so we never upscale tiny pages excessively.
+                rect = page.rect
+                longest_pt = max(rect.width, rect.height) or 1.0
+                zoom = min(self.max_image_dim / longest_pt, 300 / 72)
+                mat = fitz.Matrix(zoom, zoom)
                 pix = page.get_pixmap(matrix=mat)
                 png_bytes = pix.tobytes("png")
                 images.append(base64.b64encode(png_bytes).decode("utf-8"))
@@ -85,17 +109,22 @@ class OlmOCRLoader:
     #  Retry helpers
     # ------------------------------------------------------------------ #
 
+    # Only statuses that are genuinely transient. Notably NOT 500: an Ollama 500 is
+    # usually a deterministic model-runner crash (e.g. the M-RoPE context-shift abort),
+    # so retrying just re-triggers the crash and multiplies the wait.
+    RETRYABLE_STATUS_CODES = frozenset({429, 503})
+
     def _is_retryable_error(self, error: Exception) -> bool:
         if isinstance(error, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)):
             return True
         if isinstance(error, requests.exceptions.HTTPError):
             if hasattr(error, "response") and error.response is not None:
-                return error.response.status_code >= 500 or error.response.status_code == 429
+                return error.response.status_code in self.RETRYABLE_STATUS_CODES
             return False
         if isinstance(error, (aiohttp.ClientConnectionError, aiohttp.ServerTimeoutError)):
             return True
         if isinstance(error, aiohttp.ClientResponseError):
-            return error.status >= 500 or error.status == 429
+            return error.status in self.RETRYABLE_STATUS_CODES
         return False
 
     def _retry_sync(self, fn, *args, **kwargs):
@@ -143,6 +172,15 @@ class OlmOCRLoader:
                 }
             ],
             "stream": False,
+            "options": {
+                "num_ctx": self.num_ctx,
+                "num_predict": self.num_predict,
+                # Near-deterministic, but NOT hard-greedy (temperature 0): pure greedy
+                # decoding sends these VL models into repetition loops on some pages,
+                # which run to num_predict (~3 min/page). A small temperature keeps
+                # output stable while breaking those loops. Matches olmOCR's reference.
+                "temperature": 0.1,
+            },
         }
 
         def request_fn():
@@ -152,7 +190,10 @@ class OlmOCRLoader:
 
         result = self._retry_sync(request_fn)
         content = result.get("message", {}).get("content", "")
-        log.debug(f"OCR completed for page {page_index + 1} of {self.file_name}")
+        log.info(
+            f"OCR completed for page {page_index + 1} of {self.file_name} "
+            f"({len(content)} chars)"
+        )
         return content
 
     async def _ocr_page_async(
@@ -170,6 +211,15 @@ class OlmOCRLoader:
                 }
             ],
             "stream": False,
+            "options": {
+                "num_ctx": self.num_ctx,
+                "num_predict": self.num_predict,
+                # Near-deterministic, but NOT hard-greedy (temperature 0): pure greedy
+                # decoding sends these VL models into repetition loops on some pages,
+                # which run to num_predict (~3 min/page). A small temperature keeps
+                # output stable while breaking those loops. Matches olmOCR's reference.
+                "temperature": 0.1,
+            },
         }
 
         async def request_fn():
@@ -184,7 +234,10 @@ class OlmOCRLoader:
 
         result = await self._retry_async(request_fn)
         content = result.get("message", {}).get("content", "")
-        log.debug(f"OCR completed for page {page_index + 1} of {self.file_name}")
+        log.info(
+            f"OCR completed for page {page_index + 1} of {self.file_name} "
+            f"({len(content)} chars)"
+        )
         return content
 
     # ------------------------------------------------------------------ #
@@ -250,7 +303,7 @@ class OlmOCRLoader:
             documents = self._build_documents(pages_text)
 
             total_time = time.time() - start_time
-            log.debug(
+            log.info(
                 f"OlmOCR sync workflow completed in {total_time:.2f}s, "
                 f"produced {len(documents)} documents from {self.file_name}"
             )
@@ -296,7 +349,7 @@ class OlmOCRLoader:
             documents = self._build_documents(pages_text)
 
             total_time = time.time() - start_time
-            log.debug(
+            log.info(
                 f"OlmOCR async workflow completed in {total_time:.2f}s, "
                 f"produced {len(documents)} documents from {self.file_name}"
             )

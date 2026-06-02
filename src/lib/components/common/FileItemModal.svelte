@@ -167,10 +167,15 @@
 		} else if (item?.type === 'file') {
 			loading = true;
 
-			const file = await getFileById(localStorage.token, item.id).catch((e) => {
-				console.error('Error fetching file:', e);
-				return null;
-			});
+			// While the file is still uploading/processing it has no server id yet
+			// (id === null). Skip the fetch — otherwise we hit /files/null → 404 and
+			// surface a misleading "could not find" error for a file that's just not ready.
+			const file = item?.id
+				? await getFileById(localStorage.token, item.id).catch((e) => {
+						console.error('Error fetching file:', e);
+						return null;
+					})
+				: null;
 
 			if (file) {
 				item.file = file || {};

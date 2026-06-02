@@ -43,7 +43,25 @@
       "Bash(find src *)",
       "Bash(git config *)",
       "Bash(git --version)",
-      "Bash(npx svelte-check *)"
+      "Bash(npx svelte-check *)",
+      "Read(//c/Users/ali.bahar/Documents/github/aos-gpt/**)",
+      "Bash(git check-ignore *)",
+      "WebFetch(domain:aos.addmangroup.com)",
+      "Bash(curl -sS -L \"https://aos.addmangroup.com/edison-ai/manifest.json\" -H \"Accept: application/json\" --max-time 20)",
+      "Bash(curl -sS -I -L \"https://aos.addmangroup.com/edison-ai/static/logo.png\" --max-time 20)",
+      "Bash(curl -sS -I -L \"https://aos.addmangroup.com/edison-ai/static/apple-touch-icon.png\" --max-time 20)",
+      "Bash(curl -sS -o /dev/null -w \"  HTTP %{http_code}, %{size_download} bytes\\\\n\" -L \"https://aos.addmangroup.com/edison-ai/static/apple-touch-icon.png\" --max-time 15)",
+      "Bash(curl -sS -o /dev/null -w \"  HTTP %{http_code}, %{size_download} bytes\\\\n\" -L \"https://aos.addmangroup.com/edison-ai/static/static/apple-touch-icon.png\" --max-time 15)",
+      "Bash(ls -d .venv venv env backend/.venv backend/venv)",
+      "Bash(ls pyproject.toml backend/requirements.txt backend/pyproject.toml)",
+      "Bash(./backend/venv/Scripts/python.exe --version)",
+      "Bash(./backend/venv/Scripts/python.exe -c \"import fitz; print\\('OK'\\)\")",
+      "Bash(./backend/venv/Scripts/python.exe -m pip install \"pymupdf==1.25.5\")",
+      "Bash(./backend/venv/Scripts/python.exe *)",
+      "Bash(printenv REDIS_URL)",
+      "Bash(./venv/Scripts/python.exe -m py_compile open_webui/retrieval/loaders/olmocr.py)",
+      "Bash(sed -n '160,180p' src/lib/components/common/FileItemModal.svelte)",
+      "Bash(grep -rn \"process/status\\\\|getFileProcessStatus\\\\|stream=true\\\\|EventSource\\\\|getFileById\" src/lib/apis/files/index.ts src/lib/components/common/FileItem.svelte)"
     ]
   }
 }

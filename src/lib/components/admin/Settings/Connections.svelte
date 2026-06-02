@@ -177,8 +177,11 @@
 					if (!(OPENAI_API_CONFIGS[idx]?.enable ?? true)) {
 						return;
 					}
-					const res = await getOpenAIModels(localStorage.token, idx);
-					if (res.pipelines) {
+					const res = await getOpenAIModels(localStorage.token, idx).catch((err) => {
+						console.error(`Failed to fetch models for OpenAI connection ${idx} (${url}):`, err);
+						return null;
+					});
+					if (res?.pipelines) {
 						pipelineUrls[url] = true;
 					}
 				});
