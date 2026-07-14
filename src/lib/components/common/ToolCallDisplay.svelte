@@ -28,18 +28,32 @@
 	} = {};
 
 	export let open = false;
+	export let grouped = false;
 	export let className = '';
+
+	const RESULT_PREVIEW_LIMIT = 10000;
+	let expandedResult = false;
+
+	$: if (!open) expandedResult = false;
 	export let buttonClassName =
 		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
 
 	const componentId = id || uuidv4();
 
 	function parseJSONString(str: string) {
-		try {
-			return parseJSONString(JSON.parse(str));
-		} catch (e) {
-			return str;
+		// Iteratively unwrap nested JSON-encoded strings. Same result as the previous
+		// recursive form, but without the stack-overflow-and-recover path it hit on
+		// scalar values (e.g. JSON.parse('5') -> 5 -> infinite self-recursion).
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		let value: any = str;
+		while (typeof value === 'string') {
+			try {
+				value = JSON.parse(value);
+			} catch {
+				break;
+			}
 		}
+		return value;
 	}
 
 	function formatJSONString(str: string) {
@@ -48,7 +62,7 @@
 			if (typeof parsed === 'object') {
 				return JSON.stringify(parsed, null, 2);
 			} else {
-				return `${JSON.stringify(String(parsed))}`;
+				return String(parsed);
 			}
 		} catch (e) {
 			return str;
@@ -67,13 +81,16 @@
 		}
 	}
 
-	$: args = decode(attributes?.arguments ?? '');
-	$: result = decode(attributes?.result ?? '');
+	export let resultContent: string = '';
+
+	$: result = resultContent || decode(attributes?.result ?? '');
 	$: files = parseJSONString(decode(attributes?.files ?? ''));
+	$: args = decode(attributes?.arguments ?? '');
 	$: isDone = attributes?.done === 'true';
 	$: isExecuting = attributes?.done && attributes?.done !== 'true';
 
 	$: parsedArgs = parseArguments(args);
+	$: parsedResult = parseJSONString(result);
 </script>
 
 <div {id} class={className}>
@@ -108,9 +125,9 @@
 				<!-- Label -->
 				<div class="flex-1 line-clamp-1">
 					<!-- Short label (below md) -->
-					<span class="@md:hidden font-semibold text-black dark:text-white">{attributes.name}</span>
+					<span class="@md:hidden text-black dark:text-white">{attributes.name}</span>
 					<!-- Full label (md and above) -->
-					<span class="hidden @md:inline">
+					<span class="hidden @md:inline font-normal">
 						{#if isDone}
 							<Markdown
 								id={`${componentId}-tool-call-title`}
@@ -167,10 +184,10 @@
 								</div>
 							{:else}
 								<div class="tool-call-body w-full max-w-none!">
-									<Markdown
-										id={`${componentId}-tool-call-args`}
-										content={`\`\`\`json\n${formatJSONString(args)}\n\`\`\``}
-									/>
+									<pre
+										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre font-mono bg-gray-50 dark:bg-gray-900 rounded-lg p-2.5 overflow-x-auto">{formatJSONString(
+											args
+										)}</pre>
 								</div>
 							{/if}
 						</div>
@@ -185,10 +202,33 @@
 								{$i18n.t('Output')}
 							</div>
 							<div class="w-full max-w-none!">
-								<Markdown
-									id={`${componentId}-tool-call-result`}
-									content={`\`\`\`json\n${formatJSONString(result)}\n\`\`\``}
-								/>
+								{#if typeof parsedResult === 'object' && parsedResult !== null}
+									<pre
+										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre font-mono bg-gray-50 dark:bg-gray-900 rounded-lg p-2.5 overflow-x-auto">{JSON.stringify(
+											parsedResult,
+											null,
+											2
+										)}</pre>
+								{:else}
+									{@const resultStr = String(parsedResult)}
+									{@const isTruncated = resultStr.length > RESULT_PREVIEW_LIMIT && !expandedResult}
+									<pre
+										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap break-words font-mono">{isTruncated
+											? resultStr.slice(0, RESULT_PREVIEW_LIMIT)
+											: resultStr}</pre>
+									{#if isTruncated}
+										<button
+											class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+											on:click|stopPropagation={() => {
+												expandedResult = true;
+											}}
+										>
+											{$i18n.t('Show all ({{COUNT}} characters)', {
+												COUNT: resultStr.length.toLocaleString()
+											})}
+										</button>
+									{/if}
+								{/if}
 							</div>
 						</div>
 					{/if}

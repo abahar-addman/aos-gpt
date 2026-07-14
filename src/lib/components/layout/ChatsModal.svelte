@@ -36,6 +36,8 @@
 	export let showSearch = true;
 	export let readOnly = false;
 
+	export let count: number | null = null;
+
 	export let query = '';
 
 	export let orderBy = 'updated_at';
@@ -50,6 +52,7 @@
 	let showDeleteConfirmDialog = false;
 
 	export let onUpdate = () => {};
+	export let onDelete: (id: string) => void = () => {};
 
 	export let loadHandler: null | Function = null;
 	export let unarchiveHandler: null | Function = null;
@@ -69,6 +72,10 @@
 			toast.error(`${error}`);
 		});
 
+		if (res) {
+			chatList = chatList?.filter((c) => c.id !== chatId) ?? null;
+			onDelete(chatId);
+		}
 		onUpdate();
 	};
 </script>
@@ -86,7 +93,18 @@
 <Modal size="lg" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class=" text-lg font-medium self-center">{title}</div>
+			<div class="flex items-center gap-2 text-lg font-medium self-center">
+				<div>{title}</div>
+				{#if count !== null}
+					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+						{count}
+					</div>
+				{:else if chatList}
+					<div class="text-lg font-medium text-gray-500 dark:text-gray-500">
+						{chatList.length}
+					</div>
+				{/if}
+			</div>
 			<button
 				class="self-center"
 				on:click={() => {
@@ -430,7 +448,7 @@
 											{#each chats as chat, idx}
 												<tr
 													class="bg-transparent {idx !== chats.length - 1 &&
-														'border-b'} dark:bg-gray-900 border-gray-50 dark:border-gray-850/30 text-xs"
+														'border-b'} border-gray-50 dark:border-gray-850/30 text-xs"
 												>
 													<td class="px-3 py-1 w-2/3">
 														<a href="/c/{chat.id}" target="_blank">

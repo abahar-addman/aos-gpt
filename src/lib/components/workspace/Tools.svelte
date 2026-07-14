@@ -6,7 +6,7 @@
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext<i18nStore>('i18n');
 
-	import { WEBUI_NAME, config, prompts, tools as _tools, user } from '$lib/stores';
+	import { WEBUI_NAME, config, tools as _tools, user } from '$lib/stores';
 
 	import { goto } from '$app/navigation';
 	import {
@@ -63,12 +63,12 @@
 
 	let showImportModal = false;
 
-	$: if (query !== undefined) {
+	const handleSearchInput = () => {
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			setFilteredItems();
 		}, 300);
-	}
+	};
 
 	$: if (tools && viewOption !== undefined) {
 		setFilteredItems();
@@ -184,13 +184,13 @@
 
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
-		window.addEventListener('blur-sm', onBlur);
+		window.addEventListener('blur', onBlur);
 
 		return () => {
 			clearTimeout(searchDebounceTimer);
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
-			window.removeEventListener('blur-sm', onBlur);
+			window.removeEventListener('blur', onBlur);
 		};
 	});
 
@@ -292,7 +292,7 @@
 						}}
 					>
 						<div
-							class=" px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
+							class="cursor-pointer px-2 py-1.5 rounded-xl bg-black text-white dark:bg-white dark:text-black transition font-medium text-sm flex items-center"
 						>
 							<Plus className="size-3" strokeWidth="2.5" />
 
@@ -325,14 +325,18 @@
 				<input
 					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
+					on:input={handleSearchInput}
+					aria-label={$i18n.t('Search Tools')}
 					placeholder={$i18n.t('Search Tools')}
 				/>
 				{#if query}
 					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 						<button
 							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
 								query = '';
+								handleSearchInput();
 							}}
 						>
 							<XMark className="size-3" strokeWidth="2" />
@@ -457,6 +461,7 @@
 											<button
 												class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 												type="button"
+												aria-label={$i18n.t('Delete')}
 												on:click={() => {
 													deleteHandler(tool);
 												}}
@@ -470,6 +475,7 @@
 												<button
 													class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 													type="button"
+													aria-label={$i18n.t('Support')}
 													on:click={() => {
 														selectedTool = tool;
 														showManifestModal = true;
@@ -484,6 +490,7 @@
 											<button
 												class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 												type="button"
+												aria-label={$i18n.t('Valves')}
 												on:click={() => {
 													selectedTool = tool;
 													showValvesModal = true;
@@ -615,7 +622,9 @@
 				}
 
 				toast.success($i18n.t('Tool imported successfully'));
-				tools.set(await getTools(localStorage.token));
+				await init();
+				importFiles = null;
+				toolsImportInputElement.value = '';
 			};
 
 			reader.readAsText(importFiles[0]);

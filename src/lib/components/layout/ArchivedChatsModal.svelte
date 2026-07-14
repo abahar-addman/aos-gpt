@@ -9,6 +9,7 @@
 	import {
 		archiveChatById,
 		getAllArchivedChats,
+		getArchivedChatCount,
 		getArchivedChatList,
 		unarchiveAllChats
 	} from '$lib/apis/chats';
@@ -21,9 +22,11 @@
 
 	export let show = false;
 	export let onUpdate = () => {};
+	export let onDelete: (id: string) => void = () => {};
 
 	let loading = false;
 	let chatList: any[] | null = null;
+	let chatCount: number | null = null;
 	let page = 1;
 
 	let query = '';
@@ -109,8 +112,9 @@
 			toast.error(`${error}`);
 		});
 
+		chatList = chatList?.filter((c) => c.id !== chatId) ?? null;
+		if (chatCount !== null) chatCount--;
 		onUpdate();
-		init();
 	};
 
 	const unarchiveAllHandler = async () => {
@@ -129,6 +133,7 @@
 
 	const init = async () => {
 		chatList = await getArchivedChatList(localStorage.token);
+		chatCount = await getArchivedChatCount(localStorage.token);
 	};
 
 	$: if (show) {
@@ -152,11 +157,16 @@
 	bind:direction
 	title={$i18n.t('Archived Chats')}
 	emptyPlaceholder={$i18n.t('You have no archived conversations.')}
+	count={chatCount}
 	{chatList}
 	{allChatsLoaded}
 	{chatListLoading}
 	onUpdate={() => {
-		init();
+		onUpdate();
+	}}
+	onDelete={(id) => {
+		if (chatCount !== null) chatCount--;
+		onDelete(id);
 	}}
 	loadHandler={loadMoreChats}
 	{unarchiveHandler}

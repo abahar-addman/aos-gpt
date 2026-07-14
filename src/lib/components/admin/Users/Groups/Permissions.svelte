@@ -21,6 +21,7 @@
 			...obj,
 			workspace: { ...defaults.workspace, ...obj.workspace },
 			sharing: { ...defaults.sharing, ...obj.sharing },
+			access_grants: { ...defaults.access_grants, ...obj.access_grants },
 			chat: { ...defaults.chat, ...obj.chat },
 			features: { ...defaults.features, ...obj.features },
 			settings: { ...defaults.settings, ...obj.settings }
@@ -173,7 +174,22 @@
 				<Switch bind:state={permissions.workspace.skills} />
 			</Tooltip>
 
-			{#if defaultPermissions?.workspace?.skills && !permissions.workspace.skills}
+			{#if permissions.workspace.skills}
+				<div class="ml-2 flex flex-col gap-2 pt-0.5 pb-1">
+					<div class="flex w-full justify-between">
+						<div class="self-center text-xs">
+							{$i18n.t('Import Skills')}
+						</div>
+						<Switch bind:state={permissions.workspace.skills_import} />
+					</div>
+					<div class="flex w-full justify-between">
+						<div class="self-center text-xs">
+							{$i18n.t('Export Skills')}
+						</div>
+						<Switch bind:state={permissions.workspace.skills_export} />
+					</div>
+				</div>
+			{:else if defaultPermissions?.workspace?.skills}
 				<div class="pb-0.5">
 					<div class="text-xs text-gray-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
@@ -391,6 +407,80 @@
 				{/if}
 			</div>
 		{/if}
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Folders Sharing')}
+				</div>
+				<Switch bind:state={permissions.sharing.folders} />
+			</div>
+			{#if defaultPermissions?.sharing?.folders && !permissions.sharing.folders}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		{#if permissions.chat.share}
+			<div class="flex flex-col w-full">
+				<div class="flex w-full justify-between my-1">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Chats Public Sharing')}
+					</div>
+					<Switch bind:state={permissions.sharing.public_chats} />
+				</div>
+				{#if defaultPermissions?.sharing?.public_chats && !permissions.sharing.public_chats}
+					<div>
+						<div class="text-xs text-gray-500">
+							{$i18n.t('This is a default user permission and will remain enabled.')}
+						</div>
+					</div>
+				{/if}
+			</div>
+		{/if}
+
+		{#if permissions.features.calendar}
+			<div class="flex flex-col w-full">
+				<div class="flex w-full justify-between my-1">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Calendars Public Sharing')}
+					</div>
+					<Switch bind:state={permissions.sharing.public_calendars} />
+				</div>
+				{#if defaultPermissions?.sharing?.public_calendars && !permissions.sharing.public_calendars}
+					<div>
+						<div class="text-xs text-gray-500">
+							{$i18n.t('This is a default user permission and will remain enabled.')}
+						</div>
+					</div>
+				{/if}
+			</div>
+		{/if}
+	</div>
+
+	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
+
+	<div>
+		<div class=" mb-2 text-sm font-medium">{$i18n.t('Access Grants')}</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Allow Sharing With Users')}
+				</div>
+				<Switch bind:state={permissions.access_grants.allow_users} />
+			</div>
+			{#if defaultPermissions?.access_grants?.allow_users && !permissions.access_grants.allow_users}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
 	</div>
 
 	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
@@ -406,6 +496,22 @@
 				<Switch bind:state={permissions.chat.file_upload} />
 			</div>
 			{#if defaultPermissions?.chat?.file_upload && !permissions.chat.file_upload}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Allow Web Upload')}
+				</div>
+				<Switch bind:state={permissions.chat.web_upload} />
+			</div>
+			{#if defaultPermissions?.chat?.web_upload && !permissions.chat.web_upload}
 				<div>
 					<div class="text-xs text-gray-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
@@ -600,6 +706,22 @@
 				<Switch bind:state={permissions.chat.export} />
 			</div>
 			{#if defaultPermissions?.chat?.export && !permissions.chat.export}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Allow Chat Import')}
+				</div>
+				<Switch bind:state={permissions.chat['import']} />
+			</div>
+			{#if defaultPermissions?.chat?.import && !permissions.chat['import']}
 				<div>
 					<div class="text-xs text-gray-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
@@ -848,6 +970,60 @@
 				<Switch bind:state={permissions.features.memories} />
 			</div>
 			{#if defaultPermissions?.features?.memories && !permissions.features.memories}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div class="flex flex-col w-full">
+			<Tooltip
+				className="flex w-full justify-between my-1"
+				content={$i18n.t(
+					'Warning: Enabling this will allow users to run scheduled prompts automatically.'
+				)}
+				placement="top-start"
+			>
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Automations')}
+				</div>
+				<Switch bind:state={permissions.features.automations} />
+			</Tooltip>
+			{#if defaultPermissions?.features?.automations && !permissions.features.automations}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Calendar')}
+				</div>
+				<Switch bind:state={permissions.features.calendar} />
+			</div>
+			{#if defaultPermissions?.features?.calendar && !permissions.features.calendar}
+				<div>
+					<div class="text-xs text-gray-500">
+						{$i18n.t('This is a default user permission and will remain enabled.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div class="flex flex-col w-full">
+			<div class="flex w-full justify-between my-1">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('User Webhooks')}
+				</div>
+				<Switch bind:state={permissions.features.webhooks} />
+			</div>
+			{#if defaultPermissions?.features?.webhooks && !permissions.features.webhooks}
 				<div>
 					<div class="text-xs text-gray-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}

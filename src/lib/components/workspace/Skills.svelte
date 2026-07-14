@@ -13,6 +13,7 @@
 		getSkillById,
 		getSkillItems,
 		exportSkills,
+		createNewSkill,
 		deleteSkillById,
 		toggleSkillById
 	} from '$lib/apis/skills';
@@ -77,18 +78,20 @@
 		}
 	};
 
-	// Debounce only query changes
-	$: if (query !== undefined) {
+	const handleSearchInput = () => {
 		loading = true;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
-			page = 1;
-			loadSkillItems();
+			if (page !== 1) {
+				page = 1;
+			} else {
+				loadSkillItems();
+			}
 		}, 300);
-	}
+	};
 
 	// Immediate response to page/filter changes
-	$: if (page && viewOption !== undefined) {
+	$: if (loaded && page && viewOption !== undefined) {
 		loadSkillItems();
 	}
 
@@ -159,13 +162,13 @@
 
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
-		window.addEventListener('blur-sm', onBlur);
+		window.addEventListener('blur', onBlur);
 
 		return () => {
 			clearTimeout(searchDebounceTimer);
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
-			window.removeEventListener('blur-sm', onBlur);
+			window.removeEventListener('blur', onBlur);
 		};
 	});
 
@@ -198,35 +201,69 @@
 					bind:this={importInputElement}
 					bind:files={importFiles}
 					type="file"
-					accept=".md"
+					accept=".md,.json"
 					hidden
 					on:change={() => {
 						if (importFiles && importFiles.length > 0) {
-							const reader = new FileReader();
-							reader.onload = (event) => {
-								const mdContent = event.target?.result;
-								if (typeof mdContent === 'string') {
-									const fm = parseFrontmatter(mdContent);
-									const fileName = importFiles[0].name.replace(/\.md$/, '');
-									const rawName = fm.name || fileName;
-									const displayName = formatSkillName(rawName);
-									sessionStorage.skill = JSON.stringify({
-										name: displayName,
-										id: fm.name || '', // Use raw frontmatter name as ID if available
-										description: fm.description || '',
-										content: mdContent,
-										is_active: true,
-										access_grants: []
-									});
-									goto('/workspace/skills/create');
-								}
-							};
-							reader.readAsText(importFiles[0]);
+							const file = importFiles[0];
+							const ext = file.name.split('.').pop()?.toLowerCase();
+
+							if (ext === 'json') {
+								// JSON import: create skills via API
+								const reader = new FileReader();
+								reader.onload = async (event) => {
+									try {
+										const content = event.target?.result;
+										if (typeof content !== 'string') return;
+
+										const parsedSkills = JSON.parse(content);
+										const items = Array.isArray(parsedSkills) ? parsedSkills : [parsedSkills];
+
+										for (const skill of items) {
+											await createNewSkill(localStorage.token, skill).catch((error) => {
+												toast.error(`${error}`);
+											});
+										}
+
+										toast.success($i18n.t('Skill imported successfully'));
+										page = 1;
+										loadSkillItems();
+										_skills.set(await getSkills(localStorage.token));
+									} catch (e) {
+										toast.error($i18n.t('Invalid JSON file'));
+									}
+								};
+								reader.readAsText(file);
+							} else {
+								// Markdown import: parse frontmatter and open in editor
+								const reader = new FileReader();
+								reader.onload = (event) => {
+									const mdContent = event.target?.result;
+									if (typeof mdContent === 'string') {
+										const fm = parseFrontmatter(mdContent);
+										const fileName = file.name.replace(/\.md$/, '');
+										const rawName = fm.name || fileName;
+										const displayName = formatSkillName(rawName);
+										sessionStorage.skill = JSON.stringify({
+											name: displayName,
+											id: fm.name || '',
+											description: fm.description || '',
+											content: mdContent,
+											is_active: true,
+											access_grants: []
+										});
+										goto('/workspace/skills/create');
+									}
+								};
+								reader.readAsText(file);
+							}
+
+							importInputElement.value = '';
 						}
 					}}
 				/>
 
-				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills}
+				{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills_import}
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
 						on:click={() => {
@@ -239,7 +276,7 @@
 					</button>
 				{/if}
 
-				{#if total && ($user?.role === 'admin' || $user?.permissions?.workspace?.skills)}
+				{#if total && ($user?.role === 'admin' || $user?.permissions?.workspace?.skills_export)}
 					<button
 						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition"
 						on:click={async () => {
@@ -286,14 +323,18 @@
 				<input
 					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
+					on:input={handleSearchInput}
+					aria-label={$i18n.t('Search Skills')}
 					placeholder={$i18n.t('Search Skills')}
 				/>
 				{#if query}
 					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 						<button
 							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
 								query = '';
+								handleSearchInput();
 							}}
 						>
 							<XMark className="size-3" strokeWidth="2" />
@@ -418,6 +459,7 @@
 											<button
 												class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 												type="button"
+												aria-label={$i18n.t('Delete')}
 												on:click={() => {
 													deleteHandler(skill);
 												}}

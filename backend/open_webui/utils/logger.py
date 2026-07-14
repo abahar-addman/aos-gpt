@@ -1,30 +1,31 @@
 import json
 import logging
 import sys
+import traceback
 from typing import TYPE_CHECKING
 
 from loguru import logger
-from opentelemetry import trace
 from open_webui.env import (
-    ENABLE_AUDIT_STDOUT,
-    ENABLE_AUDIT_LOGS_FILE,
-    AUDIT_LOGS_FILE_PATH,
+    _LEVEL_MAP,
     AUDIT_LOG_FILE_ROTATION_SIZE,
     AUDIT_LOG_LEVEL,
-    GLOBAL_LOG_LEVEL,
+    AUDIT_LOGS_FILE_PATH,
     AUDIT_UVICORN_LOGGER_NAMES,
+    ENABLE_AUDIT_LOGS_FILE,
+    ENABLE_AUDIT_STDOUT,
     ENABLE_OTEL,
     ENABLE_OTEL_LOGS,
+    GLOBAL_LOG_LEVEL,
     LOG_FORMAT,
     DD_SERVICE,
     DD_ENV,
 )
 
 if TYPE_CHECKING:
-    from loguru import Record
+    from loguru import Message, Record
 
 
-def stdout_format(record: "Record") -> str:
+def stdout_format(record: 'Record') -> str:
     """
     Generates a formatted string for log records that are output to the console. This format includes a timestamp, log level, source location (module, function, and line), the log message, and any extra data (serialized as JSON).
 
@@ -33,16 +34,16 @@ def stdout_format(record: "Record") -> str:
     Returns:
     str: A formatted log string intended for stdout.
     """
-    if record["extra"]:
-        record["extra"]["extra_json"] = json.dumps(record["extra"])
-        extra_format = " - {extra[extra_json]}"
+    if record['extra']:
+        record['extra']['extra_json'] = json.dumps(record['extra'])
+        extra_format = ' - {extra[extra_json]}'
     else:
-        extra_format = ""
+        extra_format = ''
     return (
-        "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
-        "<level>{level: <8}</level> | "
-        "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
-        "<level>{message}</level>" + extra_format + "\n{exception}"
+        '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | '
+        '<level>{level: <8}</level> | '
+        '<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - '
+        '<level>{message}</level>' + extra_format + '\n{exception}'
     )
 
 
@@ -57,31 +58,31 @@ def stdout_json_sink(message) -> None:
     """
     record = message.record
     payload = {
-        "timestamp": record["time"].isoformat(),
-        "level": record["level"].name,
-        "logger": record["name"],
-        "function": record["function"],
-        "line": record["line"],
-        "message": record["message"],
-        "service": DD_SERVICE,
-        "env": DD_ENV,
+        'timestamp': record['time'].isoformat(),
+        'level': record['level'].name,
+        'logger': record['name'],
+        'function': record['function'],
+        'line': record['line'],
+        'message': record['message'],
+        'service': DD_SERVICE,
+        'env': DD_ENV,
     }
 
-    extra = dict(record["extra"])
+    extra = dict(record['extra'])
     # Datadog's reserved correlation keys are dotted; lift them to the top level
     # rather than nesting inside "extra" so the UI auto-links logs to traces.
-    for dd_key in ("dd.trace_id", "dd.span_id"):
+    for dd_key in ('dd.trace_id', 'dd.span_id'):
         if dd_key in extra:
             payload[dd_key] = extra.pop(dd_key)
     if extra:
-        payload["extra"] = extra
+        payload['extra'] = extra
 
-    if record["exception"] is not None:
-        exc = record["exception"]
-        payload["error"] = {
-            "kind": exc.type.__name__ if exc.type else None,
-            "message": str(exc.value) if exc.value else None,
-            "stack": message,  # loguru renders traceback into the formatted message
+    if record['exception'] is not None:
+        exc = record['exception']
+        payload['error'] = {
+            'kind': exc.type.__name__ if exc.type else None,
+            'message': str(exc.value) if exc.value else None,
+            'stack': message,  # loguru renders traceback into the formatted message
         }
 
     print(json.dumps(payload, default=str), file=sys.stdout, flush=True)
@@ -109,9 +110,7 @@ class InterceptHandler(logging.Handler):
             frame = frame.f_back
             depth += 1
 
-        logger.opt(depth=depth, exception=record.exc_info).bind(
-            **self._get_extras()
-        ).log(level, record.getMessage())
+        logger.opt(depth=depth, exception=record.exc_info).bind(**self._get_extras()).log(level, record.getMessage())
         if ENABLE_OTEL and ENABLE_OTEL_LOGS:
             from open_webui.utils.telemetry.logs import otel_handler
 
@@ -121,6 +120,8 @@ class InterceptHandler(logging.Handler):
         if not ENABLE_OTEL:
             return {}
 
+        from opentelemetry import trace
+
         extras = {}
         context = trace.get_current_span().get_span_context()
         if context.is_valid:
@@ -128,12 +129,12 @@ class InterceptHandler(logging.Handler):
             # `dd.trace_id` and `dd.span_id` as decimal strings, with the
             # trace_id truncated to its lower 64 bits. See:
             # https://docs.datadoghq.com/tracing/other_telemetry/connect_logs_and_traces/opentelemetry/
-            extras["dd.trace_id"] = str(context.trace_id & 0xFFFFFFFFFFFFFFFF)
-            extras["dd.span_id"] = str(context.span_id)
+            extras['dd.trace_id'] = str(context.trace_id & 0xFFFFFFFFFFFFFFFF)
+            extras['dd.span_id'] = str(context.span_id)
         return extras
 
 
-def file_format(record: "Record"):
+def file_format(record: 'Record'):
     """
     Formats audit log records into a structured JSON string for file output.
 
@@ -144,22 +145,22 @@ def file_format(record: "Record"):
     """
 
     audit_data = {
-        "id": record["extra"].get("id", ""),
-        "timestamp": int(record["time"].timestamp()),
-        "user": record["extra"].get("user", dict()),
-        "audit_level": record["extra"].get("audit_level", ""),
-        "verb": record["extra"].get("verb", ""),
-        "request_uri": record["extra"].get("request_uri", ""),
-        "response_status_code": record["extra"].get("response_status_code", 0),
-        "source_ip": record["extra"].get("source_ip", ""),
-        "user_agent": record["extra"].get("user_agent", ""),
-        "request_object": record["extra"].get("request_object", b""),
-        "response_object": record["extra"].get("response_object", b""),
-        "extra": record["extra"].get("extra", {}),
+        'id': record['extra'].get('id', ''),
+        'timestamp': int(record['time'].timestamp()),
+        'user': record['extra'].get('user', dict()),
+        'audit_level': record['extra'].get('audit_level', ''),
+        'verb': record['extra'].get('verb', ''),
+        'request_uri': record['extra'].get('request_uri', ''),
+        'response_status_code': record['extra'].get('response_status_code', 0),
+        'source_ip': record['extra'].get('source_ip', ''),
+        'user_agent': record['extra'].get('user_agent', ''),
+        'request_object': record['extra'].get('request_object', b''),
+        'response_object': record['extra'].get('response_object', b''),
+        'extra': record['extra'].get('extra', {}),
     }
 
-    record["extra"]["file_extra"] = json.dumps(audit_data, default=str)
-    return "{extra[file_extra]}\n"
+    record['extra']['file_extra'] = json.dumps(audit_data, default=str)
+    return '{extra[file_extra]}\n'
 
 
 def start_logger():
@@ -176,10 +177,10 @@ def start_logger():
     logger.remove()
 
     stdout_filter = lambda record: (
-        "auditable" not in record["extra"] if ENABLE_AUDIT_STDOUT else True
+        'auditable' not in record['extra'] if ENABLE_AUDIT_STDOUT else True
     )
 
-    if LOG_FORMAT == "json":
+    if LOG_FORMAT == 'json':
         logger.add(
             stdout_json_sink,
             level=GLOBAL_LOG_LEVEL,
@@ -192,24 +193,22 @@ def start_logger():
             format=stdout_format,
             filter=stdout_filter,
         )
-    if AUDIT_LOG_LEVEL != "NONE" and ENABLE_AUDIT_LOGS_FILE:
+    if AUDIT_LOG_LEVEL != 'NONE' and ENABLE_AUDIT_LOGS_FILE:
         try:
             logger.add(
                 AUDIT_LOGS_FILE_PATH,
-                level="INFO",
+                level='INFO',
                 rotation=AUDIT_LOG_FILE_ROTATION_SIZE,
-                compression="zip",
+                compression='zip',
                 format=file_format,
-                filter=lambda record: record["extra"].get("auditable") is True,
+                filter=lambda record: record['extra'].get('auditable') is True,
             )
         except Exception as e:
-            logger.error(f"Failed to initialize audit log file handler: {str(e)}")
+            logger.error(f'Failed to initialize audit log file handler: {str(e)}')
 
-    logging.basicConfig(
-        handlers=[InterceptHandler()], level=GLOBAL_LOG_LEVEL, force=True
-    )
+    logging.basicConfig(handlers=[InterceptHandler()], level=GLOBAL_LOG_LEVEL, force=True)
 
-    for uvicorn_logger_name in ["uvicorn", "uvicorn.error"]:
+    for uvicorn_logger_name in ['uvicorn', 'uvicorn.error']:
         uvicorn_logger = logging.getLogger(uvicorn_logger_name)
         uvicorn_logger.setLevel(GLOBAL_LOG_LEVEL)
         uvicorn_logger.handlers = []
@@ -219,4 +218,4 @@ def start_logger():
         uvicorn_logger.setLevel(GLOBAL_LOG_LEVEL)
         uvicorn_logger.handlers = [InterceptHandler()]
 
-    logger.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
+    logger.info(f'GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}')

@@ -16,6 +16,7 @@
 		// Advanced
 		stream_response: null, // Set stream responses for this model individually
 		stream_delta_chunk_size: null, // Set the chunk size for streaming responses
+		compact_token_threshold: null,
 		function_calling: null,
 		reasoning_tags: null,
 		extended_thinking: null,
@@ -64,7 +65,7 @@
 			className="inline-tooltip"
 		>
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{$i18n.t('Stream Chat Response')}
 				</div>
 				<button
@@ -137,7 +138,7 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs">
 						{$i18n.t('Stream Delta Chunk Size')}
 					</div>
 					<button
@@ -182,6 +183,52 @@
 				</div>
 			{/if}
 		</div>
+
+		<div>
+			<Tooltip
+				content={$i18n.t(
+					'Lower the context compaction token threshold for this model. The global context compaction threshold remains the maximum.'
+				)}
+				placement="top-start"
+				className="inline-tooltip"
+			>
+				<div class="flex w-full justify-between">
+					<div class=" self-center text-xs">
+						{$i18n.t('Context Compaction Threshold')}
+					</div>
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+						type="button"
+						on:click={() => {
+							params.compact_token_threshold =
+								(params?.compact_token_threshold ?? null) === null ? 80000 : null;
+						}}
+					>
+						{#if (params?.compact_token_threshold ?? null) === null}
+							<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+						{:else}
+							<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+						{/if}
+					</button>
+				</div>
+			</Tooltip>
+
+			{#if (params?.compact_token_threshold ?? null) !== null}
+				<div class="flex mt-0.5 space-x-2">
+					<div class=" flex-1">
+						<input
+							class="text-sm w-full bg-transparent outline-hidden outline-none"
+							type="number"
+							placeholder={$i18n.t('Enter token threshold')}
+							bind:value={params.compact_token_threshold}
+							autocomplete="off"
+							min="1"
+							step="1"
+						/>
+					</div>
+				</div>
+			{/if}
+		</div>
 	{/if}
 
 	<div>
@@ -193,7 +240,7 @@
 			className="inline-tooltip"
 		>
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{$i18n.t('Function Calling')}
 				</div>
 				<button
@@ -231,7 +278,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{$i18n.t('Reasoning Tags')}
 				</div>
 				<button
@@ -296,7 +343,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{$i18n.t('Seed')}
 				</div>
 
@@ -341,7 +388,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{$i18n.t('Stop Sequence')}
 				</div>
 
@@ -385,7 +432,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{$i18n.t('Temperature')}
 				</div>
 				<button
@@ -440,7 +487,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{$i18n.t('Reasoning Effort')}
 				</div>
 				<button
@@ -483,7 +530,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'logit_bias'}
 				</div>
 				<button
@@ -528,7 +575,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'max_tokens'}
 				</div>
 
@@ -583,7 +630,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'top_k'}
 				</div>
 				<button
@@ -638,7 +685,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'top_p'}
 				</div>
 
@@ -694,7 +741,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'min_p'}
 				</div>
 				<button
@@ -749,7 +796,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'frequency_penalty'}
 				</div>
 
@@ -805,7 +852,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'presence_penalty'}
 				</div>
 
@@ -859,7 +906,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'mirostat'}
 				</div>
 				<button
@@ -914,7 +961,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'mirostat_eta'}
 				</div>
 				<button
@@ -969,7 +1016,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'mirostat_tau'}
 				</div>
 
@@ -1023,7 +1070,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'repeat_last_n'}
 				</div>
 
@@ -1079,7 +1126,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'tfs_z'}
 				</div>
 
@@ -1135,7 +1182,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'repeat_penalty'}
 				</div>
 
@@ -1192,7 +1239,7 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs">
 						{'use_mmap'}
 					</div>
 					<button
@@ -1232,7 +1279,7 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs">
 						{'use_mlock'}
 					</div>
 
@@ -1275,13 +1322,21 @@
 			className="inline-tooltip"
 		>
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'think'} ({$i18n.t('Ollama')})
 				</div>
 				<button
 					class="p-1 px-3 text-xs flex rounded-sm transition"
 					on:click={() => {
-						params.think = (params?.think ?? null) === null ? true : params.think ? false : null;
+						if ((params?.think ?? null) === null) {
+							params.think = true;
+						} else if (params.think === true) {
+							params.think = 'medium';
+						} else if (typeof params.think === 'string') {
+							params.think = false;
+						} else {
+							params.think = null;
+						}
 					}}
 					type="button"
 				>
@@ -1289,12 +1344,28 @@
 						<span class="ml-2 self-center">{$i18n.t('On')}</span>
 					{:else if params.think === false}
 						<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+					{:else if typeof params.think === 'string'}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
 					{:else}
 						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
 					{/if}
 				</button>
 			</div>
 		</Tooltip>
+
+		{#if typeof params.think === 'string'}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						class="text-sm w-full bg-transparent outline-hidden outline-none"
+						type="text"
+						placeholder={$i18n.t("e.g. 'low', 'medium', 'high'")}
+						bind:value={params.think}
+						autocomplete="off"
+					/>
+				</div>
+			</div>
+		{/if}
 	</div>
 
 	<div class=" py-0.5 w-full justify-between">
@@ -1304,7 +1375,7 @@
 			className="inline-tooltip"
 		>
 			<div class=" py-0.5 flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'format'} ({$i18n.t('Ollama')})
 				</div>
 				<button
@@ -1343,7 +1414,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'num_keep'} ({$i18n.t('Ollama')})
 				</div>
 
@@ -1396,7 +1467,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'num_ctx'} ({$i18n.t('Ollama')})
 				</div>
 
@@ -1451,7 +1522,7 @@
 			className="inline-tooltip"
 		>
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">
+				<div class=" self-center text-xs">
 					{'num_batch'} ({$i18n.t('Ollama')})
 				</div>
 
@@ -1507,7 +1578,7 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs">
 						{'num_thread'} ({$i18n.t('Ollama')})
 					</div>
 
@@ -1563,7 +1634,7 @@
 				className="inline-tooltip"
 			>
 				<div class="flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs">
 						{'num_gpu'} ({$i18n.t('Ollama')})
 					</div>
 
@@ -1619,7 +1690,7 @@
 				className="inline-tooltip"
 			>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">
+					<div class=" self-center text-xs">
 						{'keep_alive'} ({$i18n.t('Ollama')})
 					</div>
 					<button
@@ -1655,7 +1726,7 @@
 				{#each Object.keys(params?.custom_params ?? {}) as key}
 					<div class=" py-0.5 w-full justify-between mb-1">
 						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">
+							<div class=" self-center text-xs">
 								<input
 									type="text"
 									class=" text-xs w-full bg-transparent outline-none"
