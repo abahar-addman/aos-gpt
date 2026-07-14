@@ -328,6 +328,8 @@ RETRIEVAL_CONFIG_KEYS = {
     'MISTRAL_OCR_USE_BASE64': 'rag.mistral_ocr_use_base64',
     'MOJEEK_SEARCH_API_KEY': 'web.search.mojeek_search_api_key',
     'OLLAMA_CLOUD_WEB_SEARCH_API_KEY': 'web.search.ollama_cloud_api_key',
+    'OLM_OCR_API_BASE_URL': 'rag.OLM_OCR_API_BASE_URL',
+    'OLM_OCR_MODEL': 'rag.OLM_OCR_MODEL',
     'PADDLEOCR_VL_BASE_URL': 'rag.paddleocr_vl_base_url',
     'PADDLEOCR_VL_TOKEN': 'rag.paddleocr_vl_token',
     'PDF_EXTRACT_IMAGES': 'rag.pdf_extract_images',
@@ -655,8 +657,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'PADDLEOCR_VL_BASE_URL': config.PADDLEOCR_VL_BASE_URL,
         'PADDLEOCR_VL_TOKEN': config.PADDLEOCR_VL_TOKEN,
         # OLM OCR settings
-        'OLM_OCR_API_BASE_URL': request.app.state.config.OLM_OCR_API_BASE_URL,
-        'OLM_OCR_MODEL': request.app.state.config.OLM_OCR_MODEL,
+        'OLM_OCR_API_BASE_URL': config.OLM_OCR_API_BASE_URL,
+        'OLM_OCR_MODEL': config.OLM_OCR_MODEL,
         # MinerU settings
         'MINERU_API_MODE': config.MINERU_API_MODE,
         'MINERU_API_URL': config.MINERU_API_URL,
@@ -1097,15 +1099,13 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     )
 
     # OLM OCR settings
-    request.app.state.config.OLM_OCR_API_BASE_URL = (
+    config.OLM_OCR_API_BASE_URL = (
         form_data.OLM_OCR_API_BASE_URL
         if form_data.OLM_OCR_API_BASE_URL is not None
-        else request.app.state.config.OLM_OCR_API_BASE_URL
+        else config.OLM_OCR_API_BASE_URL
     )
-    request.app.state.config.OLM_OCR_MODEL = (
-        form_data.OLM_OCR_MODEL
-        if form_data.OLM_OCR_MODEL is not None
-        else request.app.state.config.OLM_OCR_MODEL
+    config.OLM_OCR_MODEL = (
+        form_data.OLM_OCR_MODEL if form_data.OLM_OCR_MODEL is not None else config.OLM_OCR_MODEL
     )
 
     # MinerU settings
@@ -1373,8 +1373,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'PADDLEOCR_VL_BASE_URL': config.PADDLEOCR_VL_BASE_URL,
         'PADDLEOCR_VL_TOKEN': config.PADDLEOCR_VL_TOKEN,
         # OLM OCR settings
-        'OLM_OCR_API_BASE_URL': request.app.state.config.OLM_OCR_API_BASE_URL,
-        'OLM_OCR_MODEL': request.app.state.config.OLM_OCR_MODEL,
+        'OLM_OCR_API_BASE_URL': config.OLM_OCR_API_BASE_URL,
+        'OLM_OCR_MODEL': config.OLM_OCR_MODEL,
         # MinerU settings
         'MINERU_API_MODE': config.MINERU_API_MODE,
         'MINERU_API_URL': config.MINERU_API_URL,
@@ -1922,8 +1922,8 @@ async def process_file(
                     loader = build_loader_from_config(request, loader_config)
                     # Edison: OLM OCR keys are not part of upstream's LOADER_CONFIG_KEYS,
                     # so thread the fork's OlmOCR settings onto the loader explicitly.
-                    loader.kwargs['OLM_OCR_API_BASE_URL'] = request.app.state.config.OLM_OCR_API_BASE_URL
-                    loader.kwargs['OLM_OCR_MODEL'] = request.app.state.config.OLM_OCR_MODEL
+                    loader.kwargs['OLM_OCR_API_BASE_URL'] = await Config.get('rag.OLM_OCR_API_BASE_URL')
+                    loader.kwargs['OLM_OCR_MODEL'] = await Config.get('rag.OLM_OCR_MODEL')
                     loader.user = user
                     loader.metadata = {
                         'file_id': file.id,

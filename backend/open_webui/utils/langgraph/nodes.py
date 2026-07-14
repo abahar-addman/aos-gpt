@@ -5,6 +5,7 @@ import time
 from uuid import uuid4
 from starlette.responses import StreamingResponse
 
+from open_webui.models.config import Config
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.misc import (
     get_last_user_message,
@@ -432,8 +433,8 @@ async def analyze_results(state: AgentState) -> dict:
     models = request.app.state.MODELS
     task_model_id = get_task_model_id(
         form_data["model"],
-        request.app.state.config.TASK_MODEL,
-        request.app.state.config.TASK_MODEL_EXTERNAL,
+        await Config.get('task.model.default'),
+        await Config.get('task.model.external'),
         models,
     )
 
