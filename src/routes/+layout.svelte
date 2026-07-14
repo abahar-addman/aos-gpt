@@ -32,10 +32,9 @@
 		channels,
 		channelId
 	} from '$lib/stores';
-	import { goto } from '$lib/utils/navigation';
-	import { base } from '$app/paths';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { beforeNavigate } from '$lib/utils/navigation';
+	import { beforeNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
 
 	import i18n, { initI18n } from '$lib/i18n';
@@ -103,9 +102,7 @@
 			reconnectionDelay: 1000,
 			reconnectionDelayMax: 5000,
 			randomizationFactor: 0.5,
-			// Base path must live in `path`, not the URL arg — socket.io treats a
-			// leading-slash string as a namespace, not a path prefix.
-			path: `${WEBUI_BASE_URL}/ws/socket.io`,
+			path: '/ws/socket.io',
 			transports: enableWebsocket ? ['websocket'] : ['polling', 'websocket'],
 			auth: { token: localStorage.token }
 		});
@@ -610,7 +607,7 @@
 			user.set(null);
 			localStorage.removeItem('token');
 
-			location.href = res?.redirect_url ?? `${base}/auth`;
+			location.href = res?.redirect_url ?? '/auth';
 		}
 	};
 
@@ -802,7 +799,7 @@
 						await config.set(await getBackendConfig());
 
 						// If an SSO cookie login landed us on /auth, continue into the app.
-						if ($page.url.pathname === `${base}/auth`) {
+						if ($page.url.pathname === '/auth') {
 							const dest = localStorage.getItem('redirectPath') || '/';
 							localStorage.removeItem('redirectPath');
 							await goto(dest);
@@ -815,7 +812,7 @@
 				} else {
 					// Don't redirect if we're already on the auth page
 					// Needed because we pass in tokens from OAuth logins via URL fragments
-					if ($page.url.pathname !== `${base}/auth`) {
+					if ($page.url.pathname !== '/auth') {
 						await goto(`/auth?redirect=${encodedUrl}`);
 					}
 				}
@@ -891,7 +888,7 @@
 		rel="search"
 		type="application/opensearchdescription+xml"
 		title={$WEBUI_NAME}
-		href="{base}/opensearch.xml"
+		href="/opensearch.xml"
 		crossorigin="use-credentials"
 	/>
 </svelte:head>

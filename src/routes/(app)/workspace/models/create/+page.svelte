@@ -1,7 +1,7 @@
 <script>
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
-	import { goto } from '$lib/utils/navigation';
+	import { goto } from '$app/navigation';
 	import { config, models, settings } from '$lib/stores';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 

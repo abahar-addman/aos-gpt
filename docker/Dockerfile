@@ -36,11 +36,7 @@ COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile || bun install
 
 COPY . .
-# Sub-path hosting: bake the URL prefix into the static build (empty = root).
-# Must match the backend's WEBUI_BASE_PATH at runtime.
-ARG BASE_PATH=""
 ENV APP_BUILD_HASH=${BUILD_HASH}
-ENV BASE_PATH=${BASE_PATH}
 RUN bun run build
 
 ######## WebUI backend ########
@@ -101,6 +97,12 @@ ENV TIKTOKEN_ENCODING_NAME="cl100k_base" \
 
 ## Hugging Face download cache ##
 ENV HF_HOME="/app/backend/data/cache/embedding/models"
+
+## Disable the Xet transfer backend.
+## huggingface_hub + hf_xet route Xet-backed repos (e.g. all-MiniLM-L6-v2) through
+## cas-server.xethub.hf.co, which returns 401 for unauthenticated pulls and breaks
+## the build. Forcing the classic HTTPS/LFS download path avoids that CAS server.
+ENV HF_HUB_DISABLE_XET=1
 
 ## Torch Extensions ##
 # ENV TORCH_EXTENSIONS_DIR="/.cache/torch_extensions"

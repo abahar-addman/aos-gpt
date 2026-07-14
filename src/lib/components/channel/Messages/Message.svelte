@@ -14,8 +14,7 @@
 	import { toast } from 'svelte-sonner';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { base } from '$app/paths';
-	import { goto } from '$lib/utils/navigation';
+	import { goto } from '$app/navigation';
 	import { formatDate } from '$lib/utils';
 
 	import { settings, user, shortCodesToEmojis } from '$lib/stores';
@@ -410,7 +409,7 @@
 							</div>
 							<div class="flex gap-1.5">
 								<a
-									href="{base}/s/{sharedChat.share_id}"
+									href="/s/{sharedChat.share_id}"
 									target="_blank"
 									class="px-3 py-1.5 text-xs font-medium bg-gray-900 dark:bg-white text-white dark:text-black hover:opacity-90 transition rounded-full"
 								>

@@ -17,7 +17,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { formatNumber } from '$lib/utils';
-	import { goto } from '$lib/utils/navigation';
+	import { goto } from '$app/navigation';
 
 	const i18n = getContext<i18nStore>('i18n');
 

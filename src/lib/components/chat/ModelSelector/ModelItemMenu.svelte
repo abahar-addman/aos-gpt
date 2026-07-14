@@ -3,7 +3,7 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	import { getContext } from 'svelte';
-	import { goto } from '$lib/utils/navigation';
+	import { goto } from '$app/navigation';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Pin from '$lib/components/icons/Pin.svelte';

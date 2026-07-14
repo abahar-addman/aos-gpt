@@ -18,7 +18,7 @@
 
 	import { slide } from 'svelte/transition';
 	import { page } from '$app/stores';
-	import { goto } from '$lib/utils/navigation';
+	import { goto } from '$app/navigation';
 
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
 	import ModelSelector from '../chat/ModelSelector.svelte';

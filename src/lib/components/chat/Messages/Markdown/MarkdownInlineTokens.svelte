@@ -4,7 +4,7 @@
 
 	import type { Token } from 'marked';
 	import { getContext } from 'svelte';
-	import { goto } from '$lib/utils/navigation';
+	import { goto } from '$app/navigation';
 
 	const i18n = getContext<i18nStore>('i18n');
 

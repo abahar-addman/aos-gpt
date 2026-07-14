@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { base } from '$app/paths';
 	import { onMount, getContext } from 'svelte';
 	import { WEBUI_NAME, showSidebar, functions, mobile } from '$lib/stores';
 	import { page } from '$app/stores';
@@ -53,28 +52,28 @@
 						class="min-w-fit p-1.5 {['/playground', '/playground/'].includes($page.url.pathname)
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-						href="{base}/playground">{$i18n.t('Chat')}</a
+						href="/playground">{$i18n.t('Chat')}</a
 					>
 
 					<!-- <a
 						class="min-w-fit p-1.5 {$page.url.pathname.includes('/playground/notes')
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-						href="{base}/playground/notes">{$i18n.t('Notes')}</a
+						href="/playground/notes">{$i18n.t('Notes')}</a
 					> -->
 
 					<a
 						class="min-w-fit p-1.5 {$page.url.pathname.includes('/playground/completions')
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-						href="{base}/playground/completions">{$i18n.t('Completions')}</a
+						href="/playground/completions">{$i18n.t('Completions')}</a
 					>
 
 					<a
 						class="min-w-fit p-1.5 {$page.url.pathname.includes('/playground/images')
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-						href="{base}/playground/images">{$i18n.t('Images')}</a
+						href="/playground/images">{$i18n.t('Images')}</a
 					>
 				</div>
 			</div>

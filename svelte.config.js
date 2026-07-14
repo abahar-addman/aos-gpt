@@ -17,12 +17,9 @@ const config = {
 			assets: 'build',
 			fallback: 'index.html'
 		}),
-		// App can be hosted under a sub-path behind a reverse proxy (e.g. /edison-ai).
-		// BASE_PATH is baked in at build time; empty string = hosted at root.
-		// `relative: false` keeps asset/_app URLs absolute (prefixed with base), which
-		// is required for the SPA fallback that serves index.html at arbitrary depths.
+		// `relative: false` keeps asset/_app URLs absolute, which is required for the
+		// SPA fallback that serves index.html at arbitrary route depths.
 		paths: {
-			base: process.env.BASE_PATH || '',
 			relative: false
 		},
 		// poll for new version name every 60 seconds (to trigger reload mechanic in +layout.svelte)

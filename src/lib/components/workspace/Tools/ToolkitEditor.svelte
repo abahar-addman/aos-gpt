@@ -4,7 +4,7 @@
 
 	const i18n = /** @type {i18nStore} */ (getContext('i18n'));
 
-	import { goto } from '$lib/utils/navigation';
+	import { goto } from '$app/navigation';
 	import { user } from '$lib/stores';
 	import { updateToolAccessGrants } from '$lib/apis/tools';
 

@@ -1,7 +1,7 @@
 <script>
 	import { toast } from 'svelte-sonner';
 
-	import { goto } from '$lib/utils/navigation';
+	import { goto } from '$app/navigation';
 	import { getContext } from 'svelte';
 	const i18n = /** @type {i18nStore} */ (getContext('i18n'));
 

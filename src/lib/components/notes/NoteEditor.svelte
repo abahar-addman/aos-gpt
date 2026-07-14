@@ -9,7 +9,7 @@
 	import { marked } from 'marked';
 	import { toast } from 'svelte-sonner';
 
-	import { goto } from '$lib/utils/navigation';
+	import { goto } from '$app/navigation';
 
 	import dayjs from '$lib/dayjs';
 	import calendar from 'dayjs/plugin/calendar';

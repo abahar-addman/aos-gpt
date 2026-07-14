@@ -1,13 +1,11 @@
 import { browser, dev } from '$app/environment';
-import { base } from '$app/paths';
 // import { version } from '../../package.json';
 
 export const APP_NAME = 'Edison AI';
 
 export const WEBUI_HOSTNAME = browser ? (dev ? `` : ``) : '';
-// `base` (from svelte.config.js paths.base) prefixes every API/socket URL so they
-// resolve under the reverse-proxy prefix (e.g. /edison-ai). Empty string = root.
-export const WEBUI_BASE_URL = base;
+// Served at the site root; all API/socket URLs are root-absolute.
+export const WEBUI_BASE_URL = '';
 export const WEBUI_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1`;
 
 export const OLLAMA_API_BASE_URL = `${WEBUI_BASE_URL}/ollama`;

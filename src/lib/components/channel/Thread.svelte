@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto } from '$lib/utils/navigation';
+	import { goto } from '$app/navigation';
 
 	import { socket, user } from '$lib/stores';
 

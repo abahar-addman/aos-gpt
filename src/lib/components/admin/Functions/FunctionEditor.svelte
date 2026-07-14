@@ -1,6 +1,6 @@
 <script>
 	import { getContext, onMount, tick } from 'svelte';
-	import { goto } from '$lib/utils/navigation';
+	import { goto } from '$app/navigation';
 
 	const i18n = /** @type {i18nStore} */ (getContext('i18n'));
 

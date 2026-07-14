@@ -61,7 +61,12 @@
       "Bash(printenv REDIS_URL)",
       "Bash(./venv/Scripts/python.exe -m py_compile open_webui/retrieval/loaders/olmocr.py)",
       "Bash(sed -n '160,180p' src/lib/components/common/FileItemModal.svelte)",
-      "Bash(grep -rn \"process/status\\\\|getFileProcessStatus\\\\|stream=true\\\\|EventSource\\\\|getFileById\" src/lib/apis/files/index.ts src/lib/components/common/FileItem.svelte)"
+      "Bash(grep -rn \"process/status\\\\|getFileProcessStatus\\\\|stream=true\\\\|EventSource\\\\|getFileById\" src/lib/apis/files/index.ts src/lib/components/common/FileItem.svelte)",
+      "Bash(./venv/Scripts/python.exe *)",
+      "PowerShell(git *)",
+      "PowerShell(python \"C:\\\\Users\\\\ALI~1.BAH\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-ali-bahar-documents-gitHub-aos-gpt\\\\9da4c5ca-ed40-4a2f-a46c-1079ece4938a\\\\scratchpad\\\\revert_prefix.py\")",
+      "PowerShell(Remove-Item *)",
+      "PowerShell(bun run *)"
     ]
   }
 }

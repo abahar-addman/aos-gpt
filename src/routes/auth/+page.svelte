@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext } from 'svelte';
-	import { goto } from '$lib/utils/navigation';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	import { getBackendConfig } from '$lib/apis';

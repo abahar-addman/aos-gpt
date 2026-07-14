@@ -95,12 +95,6 @@ if LOG_FORMAT not in ("text", "json"):
 DD_SERVICE = os.environ.get("DD_SERVICE", "edison-ai")
 DD_ENV = os.environ.get("DD_ENV", os.environ.get("ENV", "dev"))
 
-# Sub-path hosting. When the app is served under a URL prefix behind a reverse
-# proxy that strips the prefix before forwarding (e.g. /edison-ai), set this so
-# FastAPI's root_path is correct and server-generated URLs/redirects carry the
-# prefix. Must match the frontend build's BASE_PATH. Empty = hosted at root.
-WEBUI_BASE_PATH = os.environ.get("WEBUI_BASE_PATH", "").rstrip("/")
-
 log = logging.getLogger(__name__)
 log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
 

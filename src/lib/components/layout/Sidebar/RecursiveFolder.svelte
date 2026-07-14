@@ -8,7 +8,7 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { goto } from '$lib/utils/navigation';
+	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 
 	import { chatId, mobile, selectedFolder, showSidebar } from '$lib/stores';

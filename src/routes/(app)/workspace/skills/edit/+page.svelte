@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { goto } from '$lib/utils/navigation';
+	import { goto } from '$app/navigation';
 	import { skills } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 

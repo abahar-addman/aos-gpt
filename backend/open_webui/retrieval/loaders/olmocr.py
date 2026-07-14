@@ -32,6 +32,16 @@ DEFAULT_NUM_CTX = 8192
 # window (which is both slow and risks the M-RoPE shift). Leaves headroom under
 # num_ctx for the ~2k image tokens + prompt. A dense page rarely exceeds this.
 DEFAULT_NUM_PREDICT = 4096
+# Mild repetition penalty. Greedy/near-greedy decoding can send these VL models into
+# repetition loops that run all the way to num_predict (~3 min/page). A small penalty
+# breaks those loops without meaningfully distorting legitimate repeated content
+# (e.g. number columns). Higher values trade OCR fidelity for shorter output.
+DEFAULT_REPEAT_PENALTY = 1.15
+# Pages whose embedded text layer has at least this many characters are treated as
+# digital text and read directly with PyMuPDF (exact + ~instant), skipping the VLM.
+# Scanned pages have little/no extractable text and still go through OCR. Raise this
+# (or set use_text_layer=False) to force more pages through the model.
+DEFAULT_MIN_TEXT_LAYER_CHARS = 100
 
 
 class OlmOCRLoader:
@@ -54,6 +64,9 @@ class OlmOCRLoader:
         max_image_dim: int = DEFAULT_MAX_IMAGE_DIM,
         num_ctx: int = DEFAULT_NUM_CTX,
         num_predict: int = DEFAULT_NUM_PREDICT,
+        repeat_penalty: float = DEFAULT_REPEAT_PENALTY,
+        use_text_layer: bool = True,
+        min_text_layer_chars: int = DEFAULT_MIN_TEXT_LAYER_CHARS,
     ):
         if not base_url:
             raise ValueError("Ollama base URL cannot be empty.")
@@ -68,6 +81,9 @@ class OlmOCRLoader:
         self.max_image_dim = max_image_dim
         self.num_ctx = num_ctx
         self.num_predict = num_predict
+        self.repeat_penalty = repeat_penalty
+        self.use_text_layer = use_text_layer
+        self.min_text_layer_chars = min_text_layer_chars
 
         self.file_name = os.path.basename(file_path)
         self.file_size = os.path.getsize(file_path)
@@ -76,8 +92,30 @@ class OlmOCRLoader:
     #  PDF rendering
     # ------------------------------------------------------------------ #
 
-    def _render_pages_to_base64(self) -> List[str]:
-        """Render each PDF page to a PNG image and return as base64 strings."""
+    def _render_page_to_base64(self, page) -> str:
+        """Render a single PyMuPDF page to a base64-encoded PNG."""
+        import fitz  # PyMuPDF
+
+        # Scale so the page's longest side ~= max_image_dim. This bounds the
+        # vision-token count and keeps us inside num_ctx (see module note).
+        # Cap the zoom at ~300 DPI so we never upscale tiny pages excessively.
+        rect = page.rect
+        longest_pt = max(rect.width, rect.height) or 1.0
+        zoom = min(self.max_image_dim / longest_pt, 300 / 72)
+        mat = fitz.Matrix(zoom, zoom)
+        pix = page.get_pixmap(matrix=mat)
+        png_bytes = pix.tobytes("png")
+        return base64.b64encode(png_bytes).decode("utf-8")
+
+    def _build_page_plan(self) -> List[Dict[str, Any]]:
+        """Decide, per page, how to extract its text.
+
+        Pages that already carry a usable embedded text layer are read directly
+        with PyMuPDF (exact and near-instant); only image/scanned pages are rendered
+        for VLM OCR. Returns one entry per page, in order:
+            {"source": "text-layer", "text": "..."}   # use directly
+            {"source": "ocr",        "image": "<b64>"} # send to Ollama
+        """
         try:
             import fitz  # PyMuPDF
         except ImportError as e:
@@ -85,25 +123,29 @@ class OlmOCRLoader:
                 "PyMuPDF is required for OlmOCR. Install it with `pip install pymupdf`."
             ) from e
 
-        images: List[str] = []
+        plan: List[Dict[str, Any]] = []
         doc = fitz.open(self.file_path)
         try:
             for page in doc:
-                # Scale so the page's longest side ~= max_image_dim. This bounds the
-                # vision-token count and keeps us inside num_ctx (see module note).
-                # Cap the zoom at ~300 DPI so we never upscale tiny pages excessively.
-                rect = page.rect
-                longest_pt = max(rect.width, rect.height) or 1.0
-                zoom = min(self.max_image_dim / longest_pt, 300 / 72)
-                mat = fitz.Matrix(zoom, zoom)
-                pix = page.get_pixmap(matrix=mat)
-                png_bytes = pix.tobytes("png")
-                images.append(base64.b64encode(png_bytes).decode("utf-8"))
+                text = ""
+                if self.use_text_layer:
+                    text = (page.get_text("text") or "").strip()
+
+                if self.use_text_layer and len(text) >= self.min_text_layer_chars:
+                    plan.append({"source": "text-layer", "text": text})
+                else:
+                    plan.append(
+                        {"source": "ocr", "image": self._render_page_to_base64(page)}
+                    )
         finally:
             doc.close()
 
-        log.debug(f"Rendered {len(images)} pages from {self.file_name}")
-        return images
+        n_text = sum(1 for p in plan if p["source"] == "text-layer")
+        log.info(
+            f"Page plan for {self.file_name}: {len(plan)} pages "
+            f"({n_text} via text layer, {len(plan) - n_text} via OCR)"
+        )
+        return plan
 
     # ------------------------------------------------------------------ #
     #  Retry helpers
@@ -177,9 +219,10 @@ class OlmOCRLoader:
                 "num_predict": self.num_predict,
                 # Near-deterministic, but NOT hard-greedy (temperature 0): pure greedy
                 # decoding sends these VL models into repetition loops on some pages,
-                # which run to num_predict (~3 min/page). A small temperature keeps
-                # output stable while breaking those loops. Matches olmOCR's reference.
+                # which run to num_predict (~3 min/page). A small temperature plus a
+                # mild repeat penalty keeps output stable while breaking those loops.
                 "temperature": 0.1,
+                "repeat_penalty": self.repeat_penalty,
             },
         }
 
@@ -216,9 +259,10 @@ class OlmOCRLoader:
                 "num_predict": self.num_predict,
                 # Near-deterministic, but NOT hard-greedy (temperature 0): pure greedy
                 # decoding sends these VL models into repetition loops on some pages,
-                # which run to num_predict (~3 min/page). A small temperature keeps
-                # output stable while breaking those loops. Matches olmOCR's reference.
+                # which run to num_predict (~3 min/page). A small temperature plus a
+                # mild repeat penalty keeps output stable while breaking those loops.
                 "temperature": 0.1,
+                "repeat_penalty": self.repeat_penalty,
             },
         }
 
@@ -244,12 +288,17 @@ class OlmOCRLoader:
     #  Result processing
     # ------------------------------------------------------------------ #
 
-    def _build_documents(self, pages_text: List[str]) -> List[Document]:
-        """Convert page text results into Document objects."""
-        documents: List[Document] = []
-        total_pages = len(pages_text)
+    def _build_documents(self, pages: List[Dict[str, Any]]) -> List[Document]:
+        """Convert per-page results into Document objects.
 
-        for idx, text in enumerate(pages_text):
+        Each entry is {"source": "text-layer"|"ocr", "text": "..."}.
+        """
+        documents: List[Document] = []
+        total_pages = len(pages)
+
+        for idx, page in enumerate(pages):
+            text = page.get("text", "")
+            page_source = page.get("source", "ocr")
             cleaned = text.strip() if isinstance(text, str) else str(text).strip()
             if not cleaned:
                 log.debug(f"Skipping empty page {idx + 1}")
@@ -265,6 +314,7 @@ class OlmOCRLoader:
                         "file_name": self.file_name,
                         "file_size": self.file_size,
                         "processing_engine": "olm-ocr",
+                        "page_source": page_source,
                         "model": self.model,
                         "content_length": len(cleaned),
                     },
@@ -291,16 +341,23 @@ class OlmOCRLoader:
     # ------------------------------------------------------------------ #
 
     def load(self) -> List[Document]:
-        """Synchronous OCR workflow: render pages, OCR each, return Documents."""
+        """Synchronous workflow: read text-layer pages directly, OCR the rest."""
         start_time = time.time()
         try:
-            images = self._render_pages_to_base64()
-            pages_text: List[str] = []
-            for idx, img_b64 in enumerate(images):
-                text = self._ocr_page_sync(img_b64, idx)
-                pages_text.append(text)
+            plan = self._build_page_plan()
+            pages: List[Dict[str, Any]] = []
+            for idx, entry in enumerate(plan):
+                if entry["source"] == "text-layer":
+                    log.info(
+                        f"Page {idx + 1} of {self.file_name} via text layer "
+                        f"({len(entry['text'])} chars)"
+                    )
+                    pages.append(entry)
+                else:
+                    text = self._ocr_page_sync(entry["image"], idx)
+                    pages.append({"source": "ocr", "text": text})
 
-            documents = self._build_documents(pages_text)
+            documents = self._build_documents(pages)
 
             total_time = time.time() - start_time
             log.info(
@@ -323,10 +380,11 @@ class OlmOCRLoader:
             ]
 
     async def load_async(self) -> List[Document]:
-        """Asynchronous OCR workflow with connection pooling."""
+        """Asynchronous workflow: read text-layer pages directly, OCR the rest."""
         start_time = time.time()
         try:
-            images = self._render_pages_to_base64()
+            plan = self._build_page_plan()
+            n_ocr = sum(1 for p in plan if p["source"] == "ocr")
 
             connector = aiohttp.TCPConnector(
                 limit=5,
@@ -334,19 +392,27 @@ class OlmOCRLoader:
                 keepalive_timeout=60,
                 enable_cleanup_closed=True,
             )
-            timeout = aiohttp.ClientTimeout(total=self.timeout * len(images))
+            # Only OCR pages hit the network; size the overall budget to those.
+            timeout = aiohttp.ClientTimeout(total=self.timeout * max(n_ocr, 1))
 
             async with aiohttp.ClientSession(
                 connector=connector,
                 timeout=timeout,
                 raise_for_status=False,
             ) as session:
-                pages_text: List[str] = []
-                for idx, img_b64 in enumerate(images):
-                    text = await self._ocr_page_async(session, img_b64, idx)
-                    pages_text.append(text)
+                pages: List[Dict[str, Any]] = []
+                for idx, entry in enumerate(plan):
+                    if entry["source"] == "text-layer":
+                        log.info(
+                            f"Page {idx + 1} of {self.file_name} via text layer "
+                            f"({len(entry['text'])} chars)"
+                        )
+                        pages.append(entry)
+                    else:
+                        text = await self._ocr_page_async(session, entry["image"], idx)
+                        pages.append({"source": "ocr", "text": text})
 
-            documents = self._build_documents(pages_text)
+            documents = self._build_documents(pages)
 
             total_time = time.time() - start_time
             log.info(
