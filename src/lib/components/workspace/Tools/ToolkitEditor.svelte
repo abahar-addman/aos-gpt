@@ -16,11 +16,26 @@
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 
+	import { PaneGroup, Pane } from 'paneforge';
+	import ToolBuilderPanel from './ToolBuilder/ToolBuilderPanel.svelte';
+	import ToolBuilder from './ToolBuilder/ToolBuilder.svelte';
+	import SparklesSolid from '$lib/components/icons/SparklesSolid.svelte';
+
 	let formElement = null;
 	let loading = false;
 
 	let showConfirm = false;
 	let showAccessControlModal = false;
+	let showBuilder = false;
+
+	// Called when the user clicks "Apply" on a builder proposal.
+	// Mutating `content` fires the reactive diff-apply into CodeMirror (see updateContent).
+	const applyBuilderCode = (code) => {
+		if (!code) return;
+		_content = code;
+		content = code;
+		tick().then(() => codeEditor?.focus?.());
+	};
 
 	export let edit = false;
 	export let clone = false;
@@ -207,7 +222,10 @@ class Tools:
 	}}
 />
 
-<div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
+<div class="flex w-full h-full overflow-hidden">
+	<PaneGroup direction="horizontal" class="w-full h-full">
+		<Pane defaultSize={70} minSize={30} class="h-full overflow-hidden">
+			<div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
 	<div class="mx-auto w-full md:px-0 h-full">
 		<form
 			bind:this={formElement}
@@ -248,6 +266,26 @@ class Tools:
 									bind:value={name}
 									required
 								/>
+							</Tooltip>
+						</div>
+
+						<div class="self-center shrink-0 mr-1.5">
+							<Tooltip content={$i18n.t('Collaboratively build this tool with Claude')}>
+								<button
+									class="{showBuilder
+										? 'text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
+										: 'text-black dark:text-white bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800'} transition px-2 py-1 rounded-full flex gap-1 items-center"
+									type="button"
+									aria-label={$i18n.t('Build with Claude')}
+									on:click={() => {
+										showBuilder = !showBuilder;
+									}}
+								>
+									<SparklesSolid className="size-3.5" />
+									<div class="text-sm font-medium shrink-0">
+										{$i18n.t('Build')}
+									</div>
+								</button>
 							</Tooltip>
 						</div>
 
@@ -352,6 +390,20 @@ class Tools:
 			</div>
 		</form>
 	</div>
+			</div>
+		</Pane>
+
+		<ToolBuilderPanel bind:show={showBuilder} containerId="workspace-container">
+			<ToolBuilder
+				{id}
+				{name}
+				description={meta.description}
+				content={_content}
+				onApply={applyBuilderCode}
+				onClose={() => (showBuilder = false)}
+			/>
+		</ToolBuilderPanel>
+	</PaneGroup>
 </div>
 
 <ConfirmDialog

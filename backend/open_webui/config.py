@@ -965,6 +965,18 @@ PADDLEOCR_VL_TOKEN = os.getenv('PADDLEOCR_VL_TOKEN', '')
 
 BYPASS_EMBEDDING_AND_RETRIEVAL = os.getenv('BYPASS_EMBEDDING_AND_RETRIEVAL', 'False').lower() == 'true'
 
+####################################
+# Tool Builder (Claude-powered assistant in the Tools workspace)
+####################################
+
+# Dedicated Anthropic key for the tool builder. Falls back to the ANTHROPIC_API_KEY
+# env var; can be overridden per-deployment via the async Config DB (admin-editable).
+ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', '')
+
+TOOL_BUILDER_MODEL = os.getenv('TOOL_BUILDER_MODEL', 'claude-opus-4-8')
+
+TOOL_BUILDER_ENABLED = os.getenv('TOOL_BUILDER_ENABLED', 'True').lower() == 'true'
+
 
 RAG_TOP_K = int(os.getenv('RAG_TOP_K', '3'))
 RAG_TOP_K_RERANKER = int(os.getenv('RAG_TOP_K_RERANKER', '3'))
@@ -2842,6 +2854,10 @@ DEFAULT_CONFIG = {
     'rag.paddleocr_vl_base_url': PADDLEOCR_VL_BASE_URL,
     'rag.paddleocr_vl_token': PADDLEOCR_VL_TOKEN,
     'rag.bypass_embedding_and_retrieval': BYPASS_EMBEDDING_AND_RETRIEVAL,
+    # Tool Builder (Claude-powered)
+    'tool_builder.enabled': TOOL_BUILDER_ENABLED,
+    'tool_builder.model': TOOL_BUILDER_MODEL,
+    'tool_builder.anthropic_api_key': ANTHROPIC_API_KEY,
     'rag.top_k': RAG_TOP_K,
     'rag.top_k_reranker': RAG_TOP_K_RERANKER,
     'rag.relevance_threshold': RAG_RELEVANCE_THRESHOLD,

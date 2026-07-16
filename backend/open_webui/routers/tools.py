@@ -8,6 +8,7 @@ from typing import Optional
 
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT
@@ -39,6 +40,11 @@ from open_webui.utils.plugin import (
     resolve_valves_schema_options,
 )
 from open_webui.utils.tools import get_tool_servers, get_tool_specs
+from open_webui.utils.tool_builder import (
+    build_system_prompt,
+    stream_tool_builder,
+    validate_tool_code,
+)
 from pydantic import BaseModel, HttpUrl
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -973,3 +979,132 @@ async def update_tools_user_valves_by_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+
+
+############################
+# Tool Builder (Claude-powered assistant)
+############################
+
+
+class ToolBuilderMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ToolBuilderContext(BaseModel):
+    id: str = ''
+    name: str = ''
+    description: str = ''
+    content: str = ''
+
+
+class ToolBuilderChatForm(BaseModel):
+    messages: list[ToolBuilderMessage] = []
+    tool: ToolBuilderContext = ToolBuilderContext()
+
+
+class ToolBuilderValidateForm(BaseModel):
+    content: str = ''
+
+
+class ToolBuilderConfigForm(BaseModel):
+    enabled: Optional[bool] = None
+    model: Optional[str] = None
+    anthropic_api_key: Optional[str] = None
+
+
+async def _require_tool_builder_access(user, db) -> None:
+    """Same gate as tool create: admin, or the workspace.tools / tools_import permission."""
+    if user.role != 'admin' and not (
+        await has_permission(user.id, 'workspace.tools', await Config.get('user.permissions'), db=db)
+        or await has_permission(
+            user.id,
+            'workspace.tools_import',
+            await Config.get('user.permissions'),
+            db=db,
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+
+@router.post('/builder/chat')
+async def tool_builder_chat(
+    form_data: ToolBuilderChatForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Stream Claude tool-building suggestions for the tool currently being edited."""
+    await _require_tool_builder_access(user, db)
+
+    if not await Config.get('tool_builder.enabled'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='The Tool Builder is disabled.',
+        )
+
+    api_key = await Config.get('tool_builder.anthropic_api_key')
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='The Tool Builder is not configured. An admin must set an Anthropic API key.',
+        )
+
+    model = await Config.get('tool_builder.model')
+    system = build_system_prompt(form_data.tool.model_dump())
+    messages = [
+        {'role': m.role, 'content': m.content}
+        for m in form_data.messages
+        if m.role in ('user', 'assistant') and (m.content or '').strip()
+    ]
+
+    return StreamingResponse(
+        stream_tool_builder(api_key, model, system, messages),
+        media_type='text/event-stream',
+    )
+
+
+@router.post('/builder/validate')
+async def tool_builder_validate(
+    form_data: ToolBuilderValidateForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Compile-check generated tool code and return the real error (unmasked)."""
+    await _require_tool_builder_access(user, db)
+    return await validate_tool_code(form_data.content)
+
+
+@router.get('/builder/config')
+async def get_tool_builder_config(user=Depends(get_verified_user)):
+    """Availability + model for the builder UI. Never returns the API key itself."""
+    return {
+        'enabled': bool(await Config.get('tool_builder.enabled')),
+        'model': await Config.get('tool_builder.model'),
+        'configured': bool(await Config.get('tool_builder.anthropic_api_key')),
+    }
+
+
+@router.post('/builder/config')
+async def update_tool_builder_config(
+    form_data: ToolBuilderConfigForm,
+    user=Depends(get_admin_user),
+):
+    """Admin-only: set the builder's enabled flag, model, and Anthropic API key."""
+    updates = {}
+    if form_data.enabled is not None:
+        updates['tool_builder.enabled'] = form_data.enabled
+    if form_data.model is not None:
+        updates['tool_builder.model'] = form_data.model
+    if form_data.anthropic_api_key is not None:
+        updates['tool_builder.anthropic_api_key'] = form_data.anthropic_api_key
+    if updates:
+        await Config.upsert(updates)
+
+    return {
+        'enabled': bool(await Config.get('tool_builder.enabled')),
+        'model': await Config.get('tool_builder.model'),
+        'configured': bool(await Config.get('tool_builder.anthropic_api_key')),
+    }
