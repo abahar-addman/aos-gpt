@@ -3,31 +3,41 @@ import { defineConfig } from 'vite';
 
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
+// Dev backend target for `bun run dev` (see the dev:backend script in package.json).
+// 1776 is this project's port everywhere else — docker/Dockerfile EXPOSE + healthcheck,
+// docker-compose.yaml, docker-compose.dev.yaml — so dev now matches the image instead of
+// sitting on 8080, which is heavily contested locally (other app servers, SSH
+// port-forwards). A forward bound to 127.0.0.1:8080 silently shadows a backend bound to
+// 0.0.0.0:8080 and every proxied call lands on the wrong server.
+// Addressed as 127.0.0.1 rather than localhost so the target can't resolve to ::1 first.
+// Keep this in sync with the dev:backend script in package.json.
+const BACKEND = 'http://127.0.0.1:1776';
+
 export default defineConfig({
 	server: {
 		proxy: {
 			'/api': {
-				target: 'http://localhost:8080',
+				target: BACKEND
 			},
 			'/ollama': {
-				target: 'http://localhost:8080',
+				target: BACKEND
 			},
 			'/openai': {
-				target: 'http://localhost:8080',
+				target: BACKEND
 			},
 			'/ws': {
-				target: 'http://localhost:8080',
-				ws: true,
+				target: BACKEND,
+				ws: true
 			},
 			'/static': {
-				target: 'http://localhost:8080',
+				target: BACKEND
 			},
 			'/cache': {
-				target: 'http://localhost:8080',
+				target: BACKEND
 			},
 			'/oauth': {
-				target: 'http://localhost:8080',
-			},
+				target: BACKEND
+			}
 		}
 	},
 	plugins: [
