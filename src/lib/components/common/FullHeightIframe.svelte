@@ -1,3 +1,10 @@
+<script context="module" lang="ts">
+	// contentWindows of embeds rendered here; Chat.svelte trusts prompt messages from these
+	const embedWindows = new Set<Window>();
+
+	export const isEmbedWindow = (source: unknown): boolean => embedWindows.has(source as Window);
+</script>
+
 <script lang="ts">
 	import { onDestroy, onMount, tick } from 'svelte';
 	import { config } from '$lib/stores';
@@ -36,6 +43,7 @@
 	let dragStartY = 0;
 	let dragStartHeight = 0;
 	let dragStartWidth = 0;
+	let registeredWindow: Window | null = null;
 
 	// Derived: build sandbox attribute from flags
 	$: sandbox =
@@ -249,6 +257,14 @@ window.Chart = parent.Chart; // Chart previously assigned on parent
 		requestAnimationFrame(resizeSameOrigin);
 		observeIframeContent();
 
+		if (iframe?.contentWindow && iframe.contentWindow !== registeredWindow) {
+			if (registeredWindow) {
+				embedWindows.delete(registeredWindow);
+			}
+			registeredWindow = iframe.contentWindow;
+			embedWindows.add(registeredWindow);
+		}
+
 		// if arguments are provided, inject them into the iframe window
 		if (args && iframe?.contentWindow) {
 			(iframe.contentWindow as any).args = args;
@@ -266,6 +282,9 @@ window.Chart = parent.Chart; // Chart previously assigned on parent
 		document.removeEventListener('mouseup', onDragEnd);
 		if (observerInstance) observerInstance.disconnect();
 		if (resizeTimeout) clearTimeout(resizeTimeout);
+		if (registeredWindow) {
+			embedWindows.delete(registeredWindow);
+		}
 	});
 </script>
 

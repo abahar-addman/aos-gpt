@@ -26,6 +26,10 @@
 	let password = '';
 	let confirmPassword = '';
 
+	// v0.11.0: a slow response used to turn repeated clicks / Enter presses into
+	// several concurrent sign-in attempts.
+	let submitting = false;
+
 	const setSessionUser = async (sessionUser, redirectPath: string | null = null) => {
 		if (sessionUser) {
 			console.log(sessionUser);
@@ -79,10 +83,19 @@
 	};
 
 	const submitHandler = async () => {
-		if (mode === 'signin') {
-			await signInHandler();
-		} else {
-			await signUpHandler();
+		if (submitting) {
+			return;
+		}
+
+		submitting = true;
+		try {
+			if (mode === 'signin') {
+				await signInHandler();
+			} else {
+				await signUpHandler();
+			}
+		} finally {
+			submitting = false;
 		}
 	};
 
@@ -422,8 +435,9 @@
 					</div>
 
 					<button
-						class="mt-6 w-full rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm py-2.5 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+						class="mt-6 w-full rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm py-2.5 transition focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-60"
 						type="submit"
+						disabled={submitting}
 					>
 						{mode === 'signin' ? $i18n.t('Sign in') : $i18n.t('Create Account')}
 					</button>

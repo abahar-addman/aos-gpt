@@ -1,9 +1,9 @@
 import asyncio
 import logging
 import os
-import shutil
 from typing import Optional
 
+import aiofiles
 import aiohttp
 from fastapi import (
     APIRouter,
@@ -18,7 +18,7 @@ from fastapi import (
 )
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_FILE_STREAM_CHUNK_SIZE
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
 from open_webui.routers.openai import get_all_models_responses
@@ -239,21 +239,23 @@ async def upload_pipeline(
     file_path = os.path.join(upload_folder, f"{filename}.tmp")
 
     try:
-        # Save the uploaded file locally (temp)
-        with open(file_path, 'wb') as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        # Stream the upload to disk instead of buffering it in memory (v0.11.0).
+        async with aiofiles.open(file_path, 'wb') as buffer:
+            while chunk := await file.read(AIOHTTP_FILE_STREAM_CHUNK_SIZE):
+                await buffer.write(chunk)
 
-        # Upload directly to Azure Blob Storage (pipeline container)
+        # Upload directly to Azure Blob Storage (pipeline container).
         # NOTE: We intentionally avoid pipeline_storage.upload_file() here because
         # AzureStorageProvider.upload_file() calls LocalStorageProvider.upload_file()
         # which saves the .py file to data/uploads/, triggering uvicorn --reload
-        # and crashing the dev server.
+        # and crashing the dev server. The blob SDK call is sync, so it runs in a
+        # worker thread to keep the event loop free.
         try:
             pipeline_storage = get_pipeline_storage_provider()
-            with open(file_path, 'rb') as f:
-                contents = f.read()
+            async with aiofiles.open(file_path, 'rb') as f:
+                contents = await f.read()
             blob_client = pipeline_storage.container_client.get_blob_client(filename)
-            blob_client.upload_blob(contents, overwrite=True)
+            await asyncio.to_thread(blob_client.upload_blob, contents, overwrite=True)
             log.info(f"Pipeline file '{filename}' uploaded to Azure Blob Storage")
         except Exception as e:
             log.warning(f'Failed to upload pipeline to Azure Blob Storage: {e}')
@@ -267,31 +269,41 @@ async def upload_pipeline(
 
         timeout = aiohttp.ClientTimeout(total=30)
         try:
-            async with aiohttp.ClientSession(
-                trust_env=True, timeout=timeout
-            ) as session:
-                with open(file_path, 'rb') as f:
-                    form_data = aiohttp.FormData()
-                    form_data.add_field(
-                        'file',
-                        f,
-                        filename=filename,
-                        content_type='application/octet-stream',
-                    )
+            async with aiohttp.ClientSession(trust_env=True, timeout=timeout) as session:
+                form_data = aiohttp.FormData()
 
-                    async with session.post(
-                        f'{url}/pipelines/upload',
-                        headers=headers,
-                        data=form_data,
-                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                    ) as response:
-                        resp_status = response.status
-                        data = await response.json()
-                        if response.ok:
-                            return {**data}
-                        # Extract error detail while response is still open
-                        if 'detail' in data:
-                            detail = data['detail']
+                async def pipeline_chunks():
+                    async with aiofiles.open(file_path, 'rb') as pipeline_file:
+                        while chunk := await pipeline_file.read(AIOHTTP_FILE_STREAM_CHUNK_SIZE):
+                            yield chunk
+
+                form_data.add_field(
+                    'file',
+                    pipeline_chunks(),
+                    filename=filename,
+                    content_type='application/octet-stream',
+                )
+
+                async with session.post(
+                    f'{url}/pipelines/upload',
+                    headers=headers,
+                    data=form_data,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ) as response:
+                    resp_status = response.status
+                    data = await response.json()
+                    if response.ok:
+                        await publish_event(
+                            request,
+                            EVENTS.PIPELINE_UPLOADED,
+                            actor=user,
+                            subject_id=data.get('id') or filename,
+                            data={'url_idx': urlIdx, 'filename': filename},
+                        )
+                        return {**data}
+                    # Extract error detail while response is still open
+                    if 'detail' in data:
+                        detail = data['detail']
         except aiohttp.ClientConnectionError as e:
             log.warning(f'Pipeline server connection error: {e}')
             detail = 'Pipeline server is not reachable. Ensure the pipeline server is running.'
@@ -317,7 +329,7 @@ async def upload_pipeline(
     finally:
         # Ensure the file is deleted after the upload is completed or on failure
         if os.path.exists(file_path):
-            os.remove(file_path)
+            await asyncio.to_thread(os.remove, file_path)
 
 
 class AddPipelineForm(BaseModel):
