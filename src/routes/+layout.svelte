@@ -800,14 +800,41 @@
 		}
 	};
 
+	// A 401 from the session endpoint itself is already the authoritative answer —
+	// re-probing it repeats the identical request with the identical token.
+	const isSessionEndpointFetch = (input) => {
+		try {
+			return (
+				resolveFetchUrl(input).pathname === resolveFetchUrl(`${WEBUI_API_BASE_URL}/auths/`).pathname
+			);
+		} catch {
+			return false;
+		}
+	};
+
+	// `trailingSlash = 'ignore'` (src/routes/+layout.js): `/auth` and `/auth/` are
+	// both the auth route, so a literal pathname compare would miss the latter.
+	const isOnAuthRoute = () => window.location.pathname.replace(/\/+$/, '') === '/auth';
+
+	// Client-side session teardown. Also expires the `token` cookie: the OAuth
+	// callback is the one place that sets it non-httpOnly (backend
+	// utils/oauth.py), so if the first session check after an SSO landing fails,
+	// the cookie is never upgraded to httpOnly and the bridge below would keep
+	// re-planting the dead token into localStorage on every reload. A no-op once
+	// the cookie is httpOnly, which is the normal steady state.
+	const clearSessionToken = () => {
+		localStorage.removeItem('token');
+		document.cookie = 'token=; Max-Age=0; path=/';
+	};
+
 	const redirectToAuthAfterUnauthorized = () => {
-		if (isAuthRedirectInProgress || window.location.pathname === '/auth') {
+		if (isAuthRedirectInProgress || isOnAuthRoute()) {
 			return;
 		}
 
 		isAuthRedirectInProgress = true;
 		user.set(null);
-		localStorage.removeItem('token');
+		clearSessionToken();
 		toast.error($i18n.t('Session expired. Please sign in again.'));
 
 		const currentPath = `${window.location.pathname}${window.location.search}`;
@@ -955,11 +982,16 @@
 		window.fetch = async (input, init) => {
 			const response = await originalFetch(input, init);
 
+			// Cheap synchronous checks first — they must short-circuit before the
+			// awaited probe, otherwise we fire a pointless request on every 401 that
+			// we already know we won't act on.
 			if (
 				response.status === 401 &&
 				localStorage.token &&
+				!isAuthRedirectInProgress &&
+				!isOnAuthRoute() &&
 				isAuthenticatedBackendFetch(input, init) &&
-				(await isCurrentSessionUnauthorized(originalFetch))
+				(isSessionEndpointFetch(input) || (await isCurrentSessionUnauthorized(originalFetch)))
 			) {
 				redirectToAuthAfterUnauthorized();
 			}
@@ -1113,27 +1145,33 @@
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
-				await setupSocket($config.features?.enable_websocket ?? true);
-
-				const currentUrl = `${window.location.pathname}${window.location.search}`;
-				const encodedUrl = encodeURIComponent(currentUrl);
-
 				// SSO/OAuth logins deliver the JWT via a non-httponly `token` cookie
 				// (set by the backend OAuth callback). Bridge it into localStorage so the
 				// session bootstrap below consumes it — otherwise we'd bounce back to /auth.
+				// Must run before setupSocket: the handshake snapshots localStorage.token
+				// at construction, so bridging afterwards leaves it `undefined`.
 				if (!localStorage.token) {
-					const tokenCookie = document.cookie
-						.split('; ')
-						.find((c) => c.startsWith('token='));
+					const tokenCookie = document.cookie.split('; ').find((c) => c.startsWith('token='));
 					if (tokenCookie) {
 						localStorage.token = decodeURIComponent(tokenCookie.slice('token='.length));
 					}
 				}
 
+				await setupSocket($config.features?.enable_websocket ?? true);
+
+				const currentUrl = `${window.location.pathname}${window.location.search}`;
+				const encodedUrl = encodeURIComponent(currentUrl);
+
 				if (localStorage.token) {
 					// Get Session User Info
 					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
-						toast.error(`${error}`);
+						console.error('Session lookup failed:', error);
+						// On a 401 the fetch interceptor has already shown a friendly
+						// "Session expired" toast; a second raw-detail toast for the same
+						// failure is noise. Other failures (network, 5xx) still need one.
+						if (!isAuthRedirectInProgress) {
+							toast.error(`${error}`);
+						}
 						return null;
 					});
 
@@ -1162,20 +1200,22 @@
 						}
 
 						// If an SSO cookie login landed us on /auth, continue into the app.
-						if ($page.url.pathname === '/auth') {
+						if (isOnAuthRoute()) {
 							const dest = localStorage.getItem('redirectPath') || '/';
 							localStorage.removeItem('redirectPath');
 							await goto(dest);
 						}
 					} else {
-						// Redirect Invalid Session User to /auth Page
-						localStorage.removeItem('token');
-						await goto(`/auth?redirect=${encodedUrl}`);
+						// Redirect Invalid Session User to /auth Page. Never carry a
+						// `redirect` pointing back at /auth — after a later successful
+						// sign-in that strands the user on the sign-in form.
+						clearSessionToken();
+						await goto(isOnAuthRoute() ? '/auth' : `/auth?redirect=${encodedUrl}`);
 					}
 				} else {
 					// Don't redirect if we're already on the auth page
 					// Needed because we pass in tokens from OAuth logins via URL fragments
-					if ($page.url.pathname !== '/auth') {
+					if (!isOnAuthRoute()) {
 						await goto(`/auth?redirect=${encodedUrl}`);
 					}
 				}

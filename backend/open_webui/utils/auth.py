@@ -20,6 +20,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from starlette.datastructures import Headers
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
     ENABLE_OTEL,
@@ -432,6 +433,19 @@ async def get_current_user(
         # Delete OAuth session if present
         if request.cookies.get('oauth_session_id'):
             response.delete_cookie('oauth_session_id')
+
+        # FastAPI merges this injected Response's headers into the final response
+        # only on the success path, so a dependency that raises would silently
+        # drop the deletions above and leave the stale cookies in the browser.
+        # Starlette's http_exception_handler does honour `exc.headers`, so ride
+        # along on the exception instead. Only the Set-Cookie headers are copied:
+        # passing the whole header set would clobber the error response's own
+        # content-type. A Headers(raw=...) mapping is used rather than a dict
+        # because dict keys would collapse the three Set-Cookie headers into one.
+        cookie_headers = [(k, v) for k, v in response.raw_headers if k.lower() == b'set-cookie']
+        if cookie_headers and isinstance(e, HTTPException):
+            existing = [(k.lower().encode('latin-1'), v.encode('latin-1')) for k, v in (e.headers or {}).items()]
+            e.headers = Headers(raw=existing + cookie_headers)
 
         raise e
 

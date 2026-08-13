@@ -285,7 +285,18 @@
 								required
 							/>
 
-							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={STT_OPENAI_API_KEY} />
+							<SensitiveInput
+								placeholder={$i18n.t('API Key')}
+								bind:value={STT_OPENAI_API_KEY}
+								required={false}
+							/>
+						</div>
+
+						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('Transcription requests are sent to {{url}}.', {
+								url: `${STT_OPENAI_API_BASE_URL || '…'}/audio/transcriptions`
+							})}
+							{$i18n.t('Leave the API key empty for self-hosted servers that do not require one.')}
 						</div>
 					</div>
 
@@ -587,7 +598,20 @@
 								required
 							/>
 
-							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_OPENAI_API_KEY} />
+							<SensitiveInput
+								placeholder={$i18n.t('API Key')}
+								bind:value={TTS_OPENAI_API_KEY}
+								required={false}
+							/>
+						</div>
+
+						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('Speech requests are sent to {{url}}.', {
+								url: `${TTS_OPENAI_API_BASE_URL || '…'}/audio/speech`
+							})}
+							{$i18n.t(
+								'This must be a text-to-speech server — a Whisper/STT endpoint will return 404 here.'
+							)}
 						</div>
 					</div>
 				{:else if TTS_ENGINE === 'elevenlabs'}

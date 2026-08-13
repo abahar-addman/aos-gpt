@@ -912,7 +912,10 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
         )
 
     response.delete_cookie('token')
-    response.delete_cookie('oui-session')
+    # Must match the name the session middleware actually sets (main.py:
+    # cookie_name / session_cookie = 'owui-session'). It was 'oui-session' here,
+    # so sign-out never dropped the OIDC Starlette session.
+    response.delete_cookie('owui-session')
     response.delete_cookie('oauth_id_token')
 
     oauth_session_id = request.cookies.get('oauth_session_id')

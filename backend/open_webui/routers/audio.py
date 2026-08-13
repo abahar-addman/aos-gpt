@@ -339,7 +339,19 @@ def load_speech_pipeline(request):
         )
 
 
-async def _raise_tts_error(exc: Exception, r=None) -> None:
+def _bearer_headers(api_key: str | None, extra: dict[str, str] | None = None) -> dict:
+    """Build headers for an OpenAI-compatible audio call.
+
+    Omits ``Authorization`` entirely when no key is configured — self-hosted STT/TTS
+    servers commonly reject a bare ``Bearer`` token rather than ignoring it.
+    """
+    headers = dict(extra or {})
+    if api_key:
+        headers['Authorization'] = f'Bearer {api_key}'
+    return headers
+
+
+async def _raise_tts_error(exc: Exception, r=None, *, engine: str = '', url: str = '') -> None:
     """Raise a standardised HTTPException from a TTS provider failure."""
     code = r.status if r is not None else 500
     detail = 'Edison AI: Server Connection Error'
@@ -353,7 +365,17 @@ async def _raise_tts_error(exc: Exception, r=None) -> None:
                 detail = f'External: {res["message"]}'
         except Exception:
             detail = f'External: {exc}'
-    raise HTTPException(status_code=code, detail=detail)
+
+    if code == 404 and url:
+        # A 404 here almost always means the configured URL points at something that is not
+        # a TTS server — most often an STT/Whisper host, which serves only transcriptions.
+        detail += (
+            f' — no text-to-speech endpoint at {url}. Verify the Text-to-Speech settings under'
+            ' Admin → Settings → Audio; a Whisper/STT server serves /audio/transcriptions,'
+            ' not /audio/speech.'
+        )
+
+    raise HTTPException(status_code=code, detail=f'TTS ({engine}): {detail}' if engine else detail)
 
 
 async def _write_tts_cache(
@@ -378,18 +400,17 @@ async def _tts_openai(request, payload, file_path, file_body_path, user):
     api_key = await Config.get('audio.tts.openai.api_key')
     api_base_url = await Config.get('audio.tts.openai.api_base_url')
 
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {api_key}',
-    }
+    headers = _bearer_headers(api_key, {'Content-Type': 'application/json'})
     if ENABLE_FORWARD_USER_INFO_HEADERS:
         headers = include_user_info_headers(headers, user)
+
+    url = f'{api_base_url}/audio/speech'
 
     r = None
     try:
         session = await get_session()
         r = await session.post(
-            url=f'{api_base_url}/audio/speech',
+            url=url,
             json=payload,
             headers=headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
@@ -409,7 +430,7 @@ async def _tts_openai(request, payload, file_path, file_body_path, user):
         return FileResponse(file_path)
     except Exception as exc:
         log.exception(exc)
-        await _raise_tts_error(exc, r)
+        await _raise_tts_error(exc, r, engine='openai', url=url)
 
 
 async def _tts_elevenlabs(request, payload, file_path, file_body_path, user):
@@ -422,11 +443,13 @@ async def _tts_elevenlabs(request, payload, file_path, file_body_path, user):
     if available_voices and voice_id not in available_voices:
         raise HTTPException(status_code=400, detail='Invalid voice id')
 
+    url = f'{ELEVENLABS_API_BASE_URL}/v1/text-to-speech/{voice_id}'
+
     r = None
     try:
         session = await get_session()
         async with session.post(
-            f'{ELEVENLABS_API_BASE_URL}/v1/text-to-speech/{voice_id}',
+            url,
             json={
                 'text': payload['input'],
                 'model_id': await Config.get('audio.tts.model'),
@@ -444,7 +467,7 @@ async def _tts_elevenlabs(request, payload, file_path, file_body_path, user):
         return FileResponse(file_path)
     except Exception as exc:
         log.exception(exc)
-        await _raise_tts_error(exc, r)
+        await _raise_tts_error(exc, r, engine='elevenlabs', url=url)
 
 
 async def _tts_azure(request, payload, file_path, file_body_path, user):
@@ -461,11 +484,13 @@ async def _tts_azure(request, payload, file_path, file_body_path, user):
         f'</speak>'
     )
 
+    url = (az_base or f'https://{az_region}.tts.speech.microsoft.com') + '/cognitiveservices/v1'
+
     r = None
     try:
         session = await get_session()
         async with session.post(
-            (az_base or f'https://{az_region}.tts.speech.microsoft.com') + '/cognitiveservices/v1',
+            url,
             headers={
                 'Ocp-Apim-Subscription-Key': await Config.get('audio.tts.api_key'),
                 'Content-Type': 'application/ssml+xml',
@@ -479,7 +504,7 @@ async def _tts_azure(request, payload, file_path, file_body_path, user):
         return FileResponse(file_path)
     except Exception as exc:
         log.exception(exc)
-        await _raise_tts_error(exc, r)
+        await _raise_tts_error(exc, r, engine='azure', url=url)
 
 
 async def _tts_transformers(request, payload, file_path, file_body_path, user):
@@ -524,11 +549,13 @@ async def _tts_mistral(request, payload, file_path, file_body_path, user):
     if not api_key:
         raise HTTPException(status_code=400, detail='Mistral API key is required for Mistral TTS')
 
+    url = f'{api_base_url}/audio/speech'
+
     r = None
     try:
         session = await get_session()
         r = await session.post(
-            url=f'{api_base_url}/audio/speech',
+            url=url,
             json={
                 'input': payload.get('input', ''),  # text to synthesize
                 'model': await Config.get('audio.tts.model') or 'voxtral-mini-tts-2603',
@@ -552,7 +579,7 @@ async def _tts_mistral(request, payload, file_path, file_body_path, user):
         return FileResponse(file_path)
     except Exception as exc:
         log.exception(exc)
-        await _raise_tts_error(exc, r)
+        await _raise_tts_error(exc, r, engine='mistral', url=url)
 
 
 # Dispatcher map: engine name -> handler
@@ -685,13 +712,17 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
         api_key = await Config.get('audio.stt.openai.api_key')
         api_base_url = await Config.get('audio.stt.openai.api_base_url')
         request_format = (await Config.get('audio.stt.openai.api_request_format') or 'multipart').lower()
+        stt_model = await Config.get('audio.stt.model')
 
-        headers = {'Authorization': f'Bearer {api_key}'}
+        headers = _bearer_headers(api_key)
         if user and ENABLE_FORWARD_USER_INFO_HEADERS:
             headers = include_user_info_headers(headers, user)
 
         for language in languages:
-            payload = {'model': await Config.get('audio.stt.model')}
+            payload = {}
+            # Self-hosted servers can 422 on a blank model; omit it rather than send ''.
+            if stt_model:
+                payload['model'] = stt_model
             if language:
                 payload['language'] = language
 
@@ -1315,9 +1346,11 @@ async def get_available_models(request: Request) -> list[dict]:
         base_url = await Config.get('audio.tts.openai.api_base_url')
         if not base_url.startswith('https://api.openai.com'):
             session = await get_session()
+            headers = _bearer_headers(await Config.get('audio.tts.openai.api_key'))
             try:
                 async with session.get(
                     f'{base_url}/audio/models',
+                    headers=headers,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     timeout=_timeout,
                 ) as resp:
@@ -1329,6 +1362,7 @@ async def get_available_models(request: Request) -> list[dict]:
                 try:
                     async with session.get(
                         f'{base_url}/models',
+                        headers=headers,
                         ssl=AIOHTTP_CLIENT_SESSION_SSL,
                         timeout=_timeout,
                     ) as resp:
@@ -1392,6 +1426,7 @@ async def get_available_voices(request) -> dict:
                 session = await get_session()
                 async with session.get(
                     f'{base_url}/audio/voices',
+                    headers=_bearer_headers(await Config.get('audio.tts.openai.api_key')),
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     timeout=_timeout,
                 ) as resp:

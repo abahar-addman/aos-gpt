@@ -196,8 +196,10 @@
 	};
 
 	onMount(async () => {
-		if ($user === undefined || $user === null) {
-			await goto('/auth');
+		if (!$user) {
+			// Preserve the deep link so signing in returns here.
+			const currentUrl = `${$page.url.pathname}${$page.url.search}`;
+			await goto(`/auth?redirect=${encodeURIComponent(currentUrl)}`);
 			return;
 		}
 		if (!['user', 'admin'].includes($user?.role)) {

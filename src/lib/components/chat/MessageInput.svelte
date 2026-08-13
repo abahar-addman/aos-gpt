@@ -248,7 +248,12 @@
 			text = text.replaceAll('{{USER_LOCATION}}', String(location));
 		}
 
-		const sessionUser = await getSessionUser(localStorage.token);
+		// Only used to interpolate {{USER_NAME}}/{{USER_EMAIL}} — a failed lookup
+		// must not abort sending the message.
+		const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
+			console.error('Failed to resolve session user for prompt variables:', error);
+			return null;
+		});
 
 		if (text.includes('{{USER_NAME}}')) {
 			const name = sessionUser?.name || 'User';

@@ -6,7 +6,7 @@
 	import { page } from '$app/stores';
 
 	import { getBackendConfig } from '$lib/apis';
-	import { getSessionUser, userSignIn, userSignUp, updateUserTimezone } from '$lib/apis/auths';
+	import { userSignIn, userSignUp, updateUserTimezone } from '$lib/apis/auths';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
@@ -88,12 +88,18 @@
 
 	onMount(async () => {
 		const redirectPath = $page.url.searchParams.get('redirect');
-		if ($user !== undefined) {
+
+		// `$user` is `undefined` (never checked) or `null` (torn down by the root
+		// layout's 401 handler) when there is no session — only a real session
+		// object should navigate away from the sign-in page. Testing against
+		// `undefined` alone reads `null` as signed-in and ping-pongs /auth <-> /.
+		if ($user) {
 			goto(redirectPath || '/');
-		} else {
-			if (redirectPath) {
-				localStorage.setItem('redirectPath', redirectPath);
-			}
+			return;
+		}
+
+		if (redirectPath) {
+			localStorage.setItem('redirectPath', redirectPath);
 		}
 
 		const error = $page.url.searchParams.get('error');

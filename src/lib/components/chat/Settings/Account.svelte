@@ -74,7 +74,12 @@
 				return null;
 			});
 
-			await user.set(sessionUser);
+			// Never blank `user` on a failed refresh — the (app) layout renders on
+			// `{#if $user}`, so setting it falsy here would unmount the app. The
+			// profile update itself already succeeded.
+			if (sessionUser) {
+				await user.set(sessionUser);
+			}
 			return true;
 		}
 		return false;

@@ -58,6 +58,21 @@
 
 	const dispatch = createEventDispatcher();
 
+	// Re-read the session after mutating the profile, without ever pushing a
+	// falsy value into `user`: the (app) layout renders on `{#if $user}` and its
+	// onMount guard has already run, so blanking the store mid-session would
+	// unmount the whole app with nothing to navigate the user back.
+	const refreshSessionUser = async () => {
+		const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
+			console.error('Failed to refresh session user:', error);
+			return null;
+		});
+
+		if (sessionUser) {
+			user.set(sessionUser);
+		}
+	};
+
 	const DEFAULT_PINNED_ITEMS = ['notes', 'workspace'];
 
 	$: pinnedItems = $settings?.pinnedMenuItems ?? DEFAULT_PINNED_ITEMS;
@@ -113,7 +128,7 @@
 <UserStatusModal
 	bind:show={showUserStatusModal}
 	onSave={async () => {
-		user.set(await getSessionUser(localStorage.token));
+		await refreshSessionUser();
 	}}
 />
 
@@ -200,7 +215,7 @@
 
 											if (res) {
 												toast.success($i18n.t('Status cleared successfully'));
-												user.set(await getSessionUser(localStorage.token));
+												await refreshSessionUser();
 											} else {
 												toast.error($i18n.t('Failed to clear status'));
 											}

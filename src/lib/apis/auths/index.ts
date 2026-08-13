@@ -99,7 +99,12 @@ export const getSessionUser = async (token: string) => {
 		})
 		.catch((err) => {
 			console.error(err);
-			error = err.detail;
+			// Fail closed. A reverse proxy or SSO gateway can answer with HTML
+			// instead of the usual `{detail: ...}` body, in which case `res.json()`
+			// itself throws and `err.detail` is undefined. Falling back guarantees
+			// `error` stays truthy so this always rejects, rather than resolving
+			// `null` and letting callers mistake a hard failure for "no user".
+			error = err?.detail || err || 'Unauthorized';
 			return null;
 		});
 
