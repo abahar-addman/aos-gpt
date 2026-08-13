@@ -164,4 +164,4 @@ opentelemetry-instrumentation-httpx==0.63b1
 opentelemetry-instrumentation-aiohttp-client==0.63b1
 opentelemetry-instrumentation-system-metrics==0.63b1
 
-langgraph>=0.2.0  # fork: LangGraph agent pipeline (v3_agent_pipe)
+langgraph==1.0.8  # fork: LangGraph agent pipeline (v3_agent_pipe)

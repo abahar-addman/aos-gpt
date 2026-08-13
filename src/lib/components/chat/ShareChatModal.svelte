@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import { user } from '$lib/stores';
+	import { config, user } from '$lib/stores';
 
 	import { toast } from 'svelte-sonner';
 	import {

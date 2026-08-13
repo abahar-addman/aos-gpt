@@ -80,6 +80,7 @@ dependencies = [
     "chardet==7.4.3",
     "pypdf==6.7.5",
     "pymupdf==1.25.5",  # fork: OlmOCR text-layer fast-path (fitz)
+    "langgraph==1.0.8",  # fork: LangGraph agent pipeline
     "fpdf2==2.8.7",
     "pymdown-extensions==10.21.3",
     "docx2txt==0.9",

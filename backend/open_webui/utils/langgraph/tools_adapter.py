@@ -80,7 +80,7 @@ async def execute_tool_call(
                     }
                 )
             else:
-                tool_function = get_updated_tool_function(
+                tool_function = await get_updated_tool_function(
                     function=tool["callable"],
                     extra_params={
                         "__messages__": form_data.get("messages", []),
@@ -96,7 +96,7 @@ async def execute_tool_call(
         tool_result = f"Unknown tool: {tool_function_name}"
 
     # Process result through existing pipeline
-    tool_result, tool_result_files, tool_result_embeds = process_tool_result(
+    tool_result, tool_result_files, tool_result_embeds = await process_tool_result(
         request,
         tool_function_name,
         tool_result,

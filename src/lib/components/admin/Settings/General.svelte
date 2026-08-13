@@ -216,7 +216,7 @@
 			<AdminSettingSection title={$i18n.t('Features')}>
 				<AdminSettingRow
 					label={$i18n.t('Community Sharing')}
-					description={$i18n.t('Allow users to share chats with the Open WebUI community.')}
+					description={$i18n.t('Allow users to share chats with the Edison AI community.')}
 					let:labelId
 				>
 					<Switch bind:state={adminConfig.ENABLE_COMMUNITY_SHARING} ariaLabelledbyId={labelId} />
