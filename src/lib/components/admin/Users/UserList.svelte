@@ -34,6 +34,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import UserPreviewModal from '$lib/components/admin/UserPreviewModal.svelte';
+	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 
 	const i18n = getContext<i18nStore>('i18n');
 

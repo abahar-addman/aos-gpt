@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import { config, user } from '$lib/stores';
+	import { user } from '$lib/stores';
 
 	import { toast } from 'svelte-sonner';
 	import {
@@ -220,17 +220,11 @@
 				{/if}
 
 				<div class="flex justify-end gap-1 mt-3">
-					{#if $config?.features.enable_community_sharing}
-						<button
-							class="flex items-center gap-1 px-3.5 py-2 text-sm font-normal bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full"
-							type="button"
-							on:click={() => {
-								shareChat();
-							}}
-						>
-							{$i18n.t('Share to Edison AI Community')}
-						</button>
-					{/if}
+					<!-- Edison AI: upstream's "Share to Open WebUI Community" button here
+					     uploads the conversation to https://openwebui.com/chats/upload. This
+					     fork deliberately does not offer that, so the button and its
+					     shareChat() handler are intentionally absent. Sharing is via the
+					     share link and the channel picker above. -->
 
 					<button
 						class="flex items-center gap-1 px-3.5 py-2 text-sm font-normal bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
