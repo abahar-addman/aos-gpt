@@ -309,19 +309,18 @@ class Tools:
 			<div class="flex shrink-0 items-center gap-1 pr-0.5">
 				<Tooltip content={$i18n.t('Collaboratively build this tool with Claude')}>
 					<button
-						class="{showBuilder
-							? 'text-sky-500 dark:text-sky-300 bg-sky-50 dark:bg-sky-200/5'
-							: 'text-black dark:text-white bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800'} flex items-center gap-1 rounded-full px-2 py-1 transition"
+						class="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-normal transition ring-1 {showBuilder
+							? 'bg-sky-50 text-sky-600 ring-sky-200 hover:bg-sky-100 dark:bg-sky-400/10 dark:text-sky-300 dark:ring-sky-400/20 dark:hover:bg-sky-400/15'
+							: 'bg-gray-50 text-gray-900 ring-gray-200 hover:bg-gray-100 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800 dark:hover:bg-gray-800'}"
 						type="button"
+						aria-pressed={showBuilder}
 						aria-label={$i18n.t('Build with Claude')}
 						on:click={() => {
 							showBuilder = !showBuilder;
 						}}
 					>
-						<SparklesSolid className="size-3.5" />
-						<div class="shrink-0 text-xs font-medium">
-							{$i18n.t('Build')}
-						</div>
+						<SparklesSolid className="size-3 shrink-0" />
+						<span class="shrink-0">{$i18n.t('Build')}</span>
 					</button>
 				</Tooltip>
 

@@ -13,7 +13,7 @@
 <div class="flex flex-col gap-1">
 	<!-- $i18n.t('user') -->
 	<!-- $i18n.t('assistant') -->
-	<div class="py-0.5 text-xs font-semibold uppercase text-gray-500">
+	<div class="py-0.5 text-[0.6875rem] tracking-wide text-gray-400 uppercase dark:text-gray-600">
 		{$i18n.t(message.role)}
 	</div>
 
@@ -21,7 +21,7 @@
 		{#if !(message?.done ?? true) && (message?.content ?? '') === ''}
 			<Skeleton size="sm" />
 		{:else}
-			<div class="markdown-prose-sm text-sm">
+			<div class="markdown-prose-sm text-xs">
 				<Markdown
 					id={`tool-builder-message-${idx}`}
 					content={message.content}

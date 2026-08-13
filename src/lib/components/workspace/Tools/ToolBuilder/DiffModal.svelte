@@ -62,19 +62,26 @@
 	<div class="flex flex-col max-h-[85dvh]">
 		<div class="flex items-center justify-between px-5 pt-4 pb-2">
 			<div class="flex items-center gap-2">
-				<div class="text-lg font-medium">{$i18n.t('Review changes')}</div>
-				<div class="text-xs text-gray-500">
+				<h2 class="text-sm font-medium text-gray-900 dark:text-white">
+					{$i18n.t('Review changes')}
+				</h2>
+				<div class="text-[0.6875rem]">
 					<span class="text-green-600 dark:text-green-400">+{added}</span>
 					<span class="text-red-600 dark:text-red-400">−{removed}</span>
 				</div>
 			</div>
-			<button class="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5" on:click={() => (show = false)}>
-				<XMark className="size-5" />
+			<button
+				class="rounded-lg p-1 text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+				type="button"
+				on:click={() => (show = false)}
+			>
+				<XMark className="size-4" />
 			</button>
 		</div>
 
-		<div class="px-5 pb-3 flex-1 overflow-auto">
-			<pre class="text-xs leading-5 font-mono rounded-lg border border-gray-100 dark:border-gray-800 overflow-x-auto"><code
+		<div class="flex-1 overflow-auto px-5 pb-3">
+			<pre
+				class="overflow-x-auto rounded-lg border border-gray-100/50 font-mono text-[11px] leading-5 dark:border-white/[0.04]"><code
 					>{#each lines as line}<div
 							class="px-2 whitespace-pre {line.t === 'add'
 								? 'bg-green-500/10 text-green-700 dark:text-green-300'
@@ -85,15 +92,19 @@
 				></pre>
 		</div>
 
-		<div class="px-5 py-3 flex justify-end gap-2 border-t border-gray-50 dark:border-gray-850">
+		<div
+			class="flex justify-end gap-2 border-t border-gray-100/50 px-5 py-3 dark:border-white/[0.04]"
+		>
 			<button
-				class="px-3.5 py-1.5 text-sm rounded-full hover:bg-gray-50 dark:hover:bg-gray-800"
+				class="flex shrink-0 items-center gap-1 rounded-lg bg-gray-50 px-2 py-1 text-xs font-normal text-gray-900 transition ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800 dark:hover:bg-gray-800"
+				type="button"
 				on:click={() => (show = false)}
 			>
 				{$i18n.t('Cancel')}
 			</button>
 			<button
-				class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+				class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+				type="button"
 				on:click={() => {
 					onApply();
 					show = false;

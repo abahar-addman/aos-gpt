@@ -6,8 +6,13 @@ suggestions from the Anthropic API and validates generated code, surfacing the
 real compile error (the tools CRUD path masks it — see constants.ERROR_MESSAGES).
 
 Uses the Anthropic SDK directly (anthropic==0.86.0, already pinned). Newer request
-fields (adaptive thinking) are passed via `extra_body` so this is robust to the
-installed SDK's typed-parameter surface; the model id is just a string the API accepts.
+fields (adaptive thinking, refusal fallbacks) are passed via `extra_body` /
+`extra_headers` so this is robust to the installed SDK's typed-parameter surface;
+the model id is just a string the API accepts.
+
+Defaults to Claude Opus 5 (see config.TOOL_BUILDER_MODEL). On that model thinking is
+on by default and `max_tokens` bounds thinking *and* the reply together, which is why
+the budget below is generous — a tool file plus its reasoning has to fit in one turn.
 """
 
 from __future__ import annotations
@@ -81,6 +86,79 @@ def _sse(text: str) -> str:
     return "data: " + json.dumps({"choices": [{"delta": {"content": text}}]}) + "\n\n"
 
 
+# Server-side refusal fallback. Opus 5 carries elevated cybersecurity safeguards, and a
+# tool builder legitimately writes code that touches HTTP, subprocesses and the
+# filesystem — benign requests can trip a classifier. `fallbacks: "default"` re-runs a
+# declined request on Anthropic's recommended substitute inside the same streamed call
+# (cyber-category declines route to Opus 4.8), so the user gets an answer instead of a
+# dead stream. It needs its own beta header; deployments whose key lacks the beta fall
+# back to a plain request rather than losing the feature.
+_FALLBACK_BETA = "server-side-fallback-2026-07-01"
+
+
+async def _stream_events(
+    client,
+    *,
+    model: str,
+    system: str,
+    messages: list[dict],
+    with_fallbacks: bool,
+) -> AsyncGenerator[str, None]:
+    """One streamed turn, yielding Open WebUI SSE chunks."""
+    extra_body: dict = {"thinking": {"type": "adaptive", "display": "summarized"}}
+    kwargs: dict = {}
+    if with_fallbacks:
+        extra_body["fallbacks"] = "default"
+        kwargs["extra_headers"] = {"anthropic-beta": _FALLBACK_BETA}
+
+    current_block_type = None
+    async with client.messages.stream(
+        model=model,
+        # Bounds thinking + reply together on Opus 5.
+        max_tokens=64000,
+        system=system,
+        messages=messages,
+        extra_body=extra_body,
+        **kwargs,
+    ) as stream:
+        async for event in stream:
+            etype = getattr(event, "type", None)
+            if etype == "content_block_start":
+                current_block_type = getattr(event.content_block, "type", None)
+                if current_block_type == "thinking":
+                    yield _sse('<details type="reasoning">\n<summary>Thinking</summary>\n')
+                elif current_block_type == "fallback":
+                    # A refusal was handled server-side; say which model took over.
+                    to_model = getattr(getattr(event.content_block, "to", None), "model", None)
+                    yield _sse(f"\n_Answered by {to_model or 'a fallback model'}._\n\n")
+            elif etype == "content_block_delta":
+                delta = event.delta
+                dtype = getattr(delta, "type", None)
+                if dtype == "thinking_delta":
+                    yield _sse(getattr(delta, "thinking", "") or "")
+                elif dtype == "text_delta":
+                    yield _sse(getattr(delta, "text", "") or "")
+            elif etype == "content_block_stop":
+                if current_block_type == "thinking":
+                    yield _sse("\n</details>\n\n")
+                current_block_type = None
+
+        # Check the outcome before trusting the content: a declined request returns
+        # HTTP 200 with stop_reason "refusal" and little or no text.
+        try:
+            final = await stream.get_final_message()
+        except Exception:  # noqa: BLE001 — never let a bookkeeping call kill the stream
+            final = None
+        if final is not None and getattr(final, "stop_reason", None) == "refusal":
+            category = getattr(getattr(final, "stop_details", None), "category", None)
+            log.warning("Tool builder request was declined by safety classifiers (%s)", category)
+            yield _sse(
+                "\n\n_This request was declined by Claude's safety classifiers"
+                + (f" ({category})" if category else "")
+                + ". Try rephrasing what the tool should do, in plain terms._\n"
+            )
+
+
 async def stream_tool_builder(
     api_key: str,
     model: str,
@@ -93,32 +171,24 @@ async def stream_tool_builder(
 
         client = anthropic.AsyncAnthropic(api_key=api_key)
 
-        current_block_type = None
-        async with client.messages.stream(
-            model=model,
-            max_tokens=64000,
-            system=system,
-            messages=messages,
-            # Pass adaptive thinking via extra_body for SDK-version robustness.
-            extra_body={"thinking": {"type": "adaptive", "display": "summarized"}},
-        ) as stream:
-            async for event in stream:
-                etype = getattr(event, "type", None)
-                if etype == "content_block_start":
-                    current_block_type = getattr(event.content_block, "type", None)
-                    if current_block_type == "thinking":
-                        yield _sse('<details type="reasoning">\n<summary>Thinking</summary>\n')
-                elif etype == "content_block_delta":
-                    delta = event.delta
-                    dtype = getattr(delta, "type", None)
-                    if dtype == "thinking_delta":
-                        yield _sse(getattr(delta, "thinking", "") or "")
-                    elif dtype == "text_delta":
-                        yield _sse(getattr(delta, "text", "") or "")
-                elif etype == "content_block_stop":
-                    if current_block_type == "thinking":
-                        yield _sse("\n</details>\n\n")
-                    current_block_type = None
+        emitted = False
+        try:
+            async for chunk in _stream_events(
+                client, model=model, system=system, messages=messages, with_fallbacks=True
+            ):
+                emitted = True
+                yield chunk
+        except anthropic.BadRequestError as e:
+            # Only retry the request-shape failure we knowingly opt into, and only if
+            # nothing has been sent yet — otherwise a retry would duplicate output.
+            if emitted or ("fallback" not in str(e).lower()):
+                raise
+            log.warning("Refusal fallbacks unavailable for this key; retrying without: %s", e)
+            async for chunk in _stream_events(
+                client, model=model, system=system, messages=messages, with_fallbacks=False
+            ):
+                yield chunk
+
         yield "data: [DONE]\n\n"
     except Exception as e:  # noqa: BLE001 — surface a real message to the client stream
         log.exception("Tool builder stream failed")

@@ -980,7 +980,7 @@ BYPASS_EMBEDDING_AND_RETRIEVAL = os.getenv('BYPASS_EMBEDDING_AND_RETRIEVAL', 'Fa
 # env var; can be overridden per-deployment via the async Config DB (admin-editable).
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', '')
 
-TOOL_BUILDER_MODEL = os.getenv('TOOL_BUILDER_MODEL', 'claude-opus-4-8')
+TOOL_BUILDER_MODEL = os.getenv('TOOL_BUILDER_MODEL', 'claude-opus-5')
 
 TOOL_BUILDER_ENABLED = os.getenv('TOOL_BUILDER_ENABLED', 'True').lower() == 'true'
 

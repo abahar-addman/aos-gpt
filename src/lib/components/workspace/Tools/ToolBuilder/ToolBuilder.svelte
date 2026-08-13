@@ -43,7 +43,18 @@
 
 	let builderConfig = null; // { enabled, model, configured }
 	let apiKeyInput = '';
-	let modelInput = 'claude-opus-4-8';
+	// Mirrors config.TOOL_BUILDER_MODEL; only used until the backend config loads.
+	const DEFAULT_MODEL = 'claude-opus-5';
+	let modelInput = DEFAULT_MODEL;
+
+	// v0.11.0 design tokens, matching AccessButton / AdminSettingField.
+	const primaryButtonClass =
+		'flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white';
+	const secondaryButtonClass =
+		'flex shrink-0 items-center gap-1 rounded-lg bg-gray-50 px-2 py-1 text-xs font-normal text-gray-900 transition ring-1 ring-gray-200 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800 dark:hover:bg-gray-800';
+	const inputClass =
+		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const helpTextClass = 'text-[0.6875rem] text-gray-400 dark:text-gray-600';
 
 	let showDiff = false;
 	let validating = false;
@@ -230,7 +241,7 @@
 		try {
 			builderConfig = await updateToolBuilderConfig(localStorage.token, {
 				anthropic_api_key: apiKeyInput,
-				model: modelInput || 'claude-opus-4-8',
+				model: modelInput || DEFAULT_MODEL,
 				enabled: true
 			});
 			apiKeyInput = '';
@@ -245,9 +256,9 @@
 			builderConfig = await getToolBuilderConfig(localStorage.token);
 		} catch (e) {
 			console.error(e);
-			builderConfig = { enabled: true, model: 'claude-opus-4-8', configured: false };
+			builderConfig = { enabled: true, model: DEFAULT_MODEL, configured: false };
 		}
-		modelInput = builderConfig?.model || 'claude-opus-4-8';
+		modelInput = builderConfig?.model || DEFAULT_MODEL;
 
 		messages = loadHistory(storageKey);
 		lastKey = storageKey;
@@ -260,73 +271,89 @@
 
 <div class="flex flex-col h-full w-full">
 	<!-- Header -->
-	<div class="flex items-center justify-between pb-1.5 pt-0.5">
-		<div class="flex items-center gap-1.5 min-w-0">
-			<SparklesSolid className="size-4 shrink-0" />
-			<div class="font-medium text-base truncate">{$i18n.t('Build with Claude')}</div>
+	<div class="flex shrink-0 items-center justify-between gap-2 pb-2">
+		<div class="flex min-w-0 items-center gap-1.5">
+			<SparklesSolid className="size-3.5 shrink-0" />
+			<div class="truncate text-xs font-medium text-gray-900 dark:text-white">
+				{$i18n.t('Build with Claude')}
+			</div>
 			<Tooltip
-				content={$i18n.t('This feature is experimental and may be modified or discontinued without notice.')}
+				content={$i18n.t(
+					'This feature is experimental and may be modified or discontinued without notice.'
+				)}
 				placement="top"
 			>
-				<span class="text-gray-500 text-xs">({$i18n.t('Experimental')})</span>
+				<span class={helpTextClass}>({$i18n.t('Experimental')})</span>
 			</Tooltip>
 		</div>
 
-		<div class="flex items-center gap-1">
+		<div class="flex shrink-0 items-center gap-1">
 			{#if messages.length > 0}
-				<Tooltip content={$i18n.t('Clear')} placement="top">
-					<button
-						class="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 px-1.5 py-1 rounded-lg"
-						on:click={clearChat}
-						disabled={loading}
-					>
-						{$i18n.t('Clear')}
-					</button>
-				</Tooltip>
+				<button
+					class="text-xs text-gray-500 transition-colors hover:text-gray-900 disabled:opacity-50 dark:text-gray-500 dark:hover:text-white"
+					type="button"
+					on:click={clearChat}
+					disabled={loading}
+				>
+					{$i18n.t('Clear')}
+				</button>
 			{/if}
 			<button
-				class="p-0.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+				class="rounded-lg p-0.5 text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+				type="button"
 				on:click={onClose}
 				aria-label={$i18n.t('Close')}
 			>
-				<XMark className="size-5" strokeWidth="2.5" />
+				<XMark className="size-4" strokeWidth="2.5" />
 			</button>
 		</div>
 	</div>
 
 	{#if builderConfig && !builderConfig.enabled}
-		<div class="flex-1 flex items-center justify-center text-sm text-gray-500 px-4 text-center">
+		<div class="flex flex-1 items-center justify-center px-4 text-center text-xs text-gray-500">
 			{$i18n.t('The Tool Builder is disabled.')}
 		</div>
 	{:else if builderConfig && !builderConfig.configured}
 		<!-- Not configured -->
-		<div class="flex-1 flex flex-col justify-center gap-3 px-2 text-sm">
+		<div class="flex flex-1 flex-col justify-center gap-2.5">
 			{#if isAdmin()}
-				<div class="text-gray-600 dark:text-gray-300">
+				<div class="text-xs text-gray-600 dark:text-gray-400">
 					{$i18n.t('Configure Claude to enable the Tool Builder.')}
 				</div>
-				<input
-					class="w-full rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 outline-hidden"
-					type="password"
-					placeholder={$i18n.t('Anthropic API Key')}
-					bind:value={apiKeyInput}
-				/>
-				<input
-					class="w-full rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 outline-hidden"
-					type="text"
-					placeholder={$i18n.t('Model')}
-					bind:value={modelInput}
-				/>
+
+				<div class="flex flex-col gap-1">
+					<div class={helpTextClass}>{$i18n.t('Anthropic API Key')}</div>
+					<input
+						class={inputClass}
+						type="password"
+						placeholder={$i18n.t('Anthropic API Key')}
+						bind:value={apiKeyInput}
+					/>
+				</div>
+
+				<div class="flex flex-col gap-1">
+					<div class={helpTextClass}>{$i18n.t('Model')}</div>
+					<input
+						class={inputClass}
+						type="text"
+						placeholder={DEFAULT_MODEL}
+						bind:value={modelInput}
+					/>
+				</div>
+
 				<button
-					class="self-start px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full disabled:opacity-50"
+					class="{primaryButtonClass} self-start"
+					type="button"
 					on:click={saveConfig}
 					disabled={!apiKeyInput}
 				>
 					{$i18n.t('Save')}
 				</button>
 			{:else}
-				<div class="text-gray-500 text-center px-4">
-					{$i18n.t('The Tool Builder is not configured yet. Ask an admin to add an Anthropic API key.')}
+				<div class="px-4 text-center text-xs text-gray-500">
+					{$i18n.t(
+						'The Tool Builder is not configured yet. Ask an admin to add an Anthropic API key.'
+					)}
 				</div>
 			{/if}
 		</div>
@@ -338,10 +365,12 @@
 			on:scroll={onScroll}
 		>
 			{#if messages.length === 0}
-				<div class="h-full flex flex-col items-center justify-center text-center text-sm text-gray-500 gap-1 px-4">
-					<SparklesSolid className="size-6 mb-1 opacity-70" />
-					<div>{$i18n.t('Describe the tool you want to build.')}</div>
-					<div class="text-xs">
+				<div
+					class="flex h-full flex-col items-center justify-center gap-1 px-4 text-center text-gray-400 dark:text-gray-600"
+				>
+					<SparklesSolid className="size-5 mb-1 opacity-60" />
+					<div class="text-xs">{$i18n.t('Describe the tool you want to build.')}</div>
+					<div class={helpTextClass}>
 						{$i18n.t('e.g. "A tool that fetches a URL and returns the page title."')}
 					</div>
 				</div>
@@ -352,22 +381,23 @@
 
 		<!-- Proposal action bar -->
 		{#if latestProposal && !loading}
-			<div class="border-t border-gray-50 dark:border-gray-850 pt-2 pb-1.5 flex flex-col gap-1.5">
-				<div class="flex items-center gap-1.5">
-					<button
-						class="px-3 py-1 text-xs font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-						on:click={applyHandler}
-					>
+			<div
+				class="flex shrink-0 flex-col gap-1.5 border-t border-gray-100/50 pt-2 pb-1.5 dark:border-white/[0.04]"
+			>
+				<div class="flex flex-wrap items-center gap-1.5">
+					<button class={primaryButtonClass} type="button" on:click={applyHandler}>
 						{$i18n.t('Apply to editor')}
 					</button>
 					<button
-						class="px-3 py-1 text-xs rounded-full border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+						class={secondaryButtonClass}
+						type="button"
 						on:click={() => (showDiff = true)}
 					>
 						{$i18n.t('View diff')}
 					</button>
 					<button
-						class="px-3 py-1 text-xs rounded-full border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-1"
+						class={secondaryButtonClass}
+						type="button"
 						on:click={validateHandler}
 						disabled={validating}
 					>
@@ -380,13 +410,13 @@
 
 				{#if validation}
 					{#if validation.ok}
-						<div class="text-xs text-green-600 dark:text-green-400">
+						<div class="text-[0.6875rem] text-green-600 dark:text-green-400">
 							{$i18n.t('Valid tool')}{validation.functions?.length
 								? ` — ${validation.functions.join(', ')}`
 								: ''}
 						</div>
 					{:else}
-						<div class="text-xs text-red-600 dark:text-red-400 break-words">
+						<div class="text-[0.6875rem] break-words text-red-600 dark:text-red-400">
 							{validation.stage ? `[${validation.stage}] ` : ''}{validation.error}
 						</div>
 					{/if}
@@ -395,10 +425,10 @@
 		{/if}
 
 		<!-- Composer -->
-		<div class="pt-2 pb-1">
+		<div class="shrink-0 pt-2 pb-1">
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
-				class="flex items-end gap-1.5 rounded-2xl bg-gray-50 dark:bg-gray-850 px-2 py-1.5"
+				class="flex items-end gap-1.5 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 transition-colors focus-within:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:focus-within:border-blue-500"
 				on:keydown={(e) => {
 					if (e.key === 'Enter' && !e.shiftKey) {
 						e.preventDefault();
@@ -408,30 +438,42 @@
 			>
 				<Textarea
 					bind:value={input}
-					className="w-full bg-transparent outline-hidden text-sm resize-none px-1"
+					className="w-full resize-none bg-transparent px-1 text-xs text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
 					placeholder={$i18n.t('Ask Claude to build or change this tool…')}
 					maxSize={200}
 				/>
 				{#if loading}
 					<Tooltip content={$i18n.t('Stop')} placement="top">
 						<button
-							class="shrink-0 p-1.5 rounded-full bg-black text-white dark:bg-white dark:text-black"
+							class="shrink-0 rounded-lg bg-gray-900 p-1.5 text-white transition hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+							type="button"
 							on:click={stopHandler}
 							aria-label={$i18n.t('Stop')}
 						>
-							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-3.5">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 24 24"
+								fill="currentColor"
+								class="size-3"
+							>
 								<rect x="6" y="6" width="12" height="12" rx="2" />
 							</svg>
 						</button>
 					</Tooltip>
 				{:else}
 					<button
-						class="shrink-0 p-1.5 rounded-full bg-black text-white dark:bg-white dark:text-black transition disabled:opacity-40"
+						class="shrink-0 rounded-lg bg-gray-900 p-1.5 text-white transition hover:bg-black disabled:opacity-40 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+						type="button"
 						on:click={submitHandler}
 						disabled={!input.trim()}
 						aria-label={$i18n.t('Send')}
 					>
-						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-3.5">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 24 24"
+							fill="currentColor"
+							class="size-3"
+						>
 							<path
 								fill-rule="evenodd"
 								d="M12 2.25a.75.75 0 0 1 .53.22l5.25 5.25a.75.75 0 0 1-1.06 1.06l-3.97-3.97V21a.75.75 0 0 1-1.5 0V4.81L7.28 8.78a.75.75 0 0 1-1.06-1.06l5.25-5.25A.75.75 0 0 1 12 2.25Z"
