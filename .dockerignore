@@ -65,3 +65,12 @@ cypress/screenshots
 
 # Static pyodide (will be built/downloaded in container if needed)
 static/pyodide
+
+# The dev-mode static mirror in backend/open_webui/config.py copies the frontend
+# `static/` tree into the backend's STATIC_DIR, so a developer's working tree can
+# hold a full pyodide copy here. Nothing serves it — /pyodide is mounted from the
+# frontend build (main.py) — and `COPY ./backend .` would otherwise pull whatever
+# happens to be on that machine into the image. Excluded regardless of local state.
+backend/open_webui/static/pyodide
+backend/open_webui/static/assets/welcome.mp4
+backend/open_webui/static/assets/welcome.webp

@@ -311,3 +311,12 @@ cypress/videos
 cypress/screenshots
 .vscode/settings.json
 .cptr
+
+# Duplicates created at runtime by the dev-mode static mirror in
+# backend/open_webui/config.py, which walks the frontend `static/` tree into the
+# backend's STATIC_DIR. Nothing serves them: /pyodide is mounted from the frontend
+# build (see main.py) and /assets/welcome.* resolves in the build output as well,
+# so these copies are dead weight that would otherwise ship inside the image.
+backend/open_webui/static/pyodide/
+backend/open_webui/static/assets/welcome.mp4
+backend/open_webui/static/assets/welcome.webp
