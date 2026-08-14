@@ -12,7 +12,6 @@
 		renderMermaidDiagram,
 		renderVegaVisualization,
 		isMermaidData,
-		isPlotlyData,
 		renderPlotlyVisualization,
 		unescapeHtml
 	} from '$lib/utils';
@@ -399,51 +398,103 @@
 	};
 
 	let mermaid = null;
-	const renderMermaid = async (code) => {
-		if (!mermaid) {
+	let mermaidTheme = null;
+	const renderMermaid = async (code, dark) => {
+		// initMermaid() reads the current .dark class, so re-running it is how a diagram picks up
+		// a theme flip. The dynamic import is cached, so this is just an initialize() call.
+		const wanted = dark ? 'dark' : 'light';
+		if (!mermaid || mermaidTheme !== wanted) {
 			mermaid = await initMermaid();
+			mermaidTheme = wanted;
 		}
 		return await renderMermaidDiagram(mermaid, code);
 	};
 
 	let plotlyHTML = null;
 
+	// marked puts the whole info string in `lang`, so ```plotly {caption="Q3"} arrives as
+	// 'plotly {caption="Q3"}', and the case is whatever the model happened to type.
+	const baseLang = () => (lang ?? '').trim().split(/\s+/)[0].toLowerCase();
+
 	const isMermaidBlock = () => {
-		if (lang === 'mermaid') return true;
-		if (lang === '' && isMermaidData(code)) return true;
+		if (baseLang() === 'mermaid') return true;
+		if (baseLang() === '' && isMermaidData(code)) return true;
 		return false;
 	};
 
-	const isPlotlyBlock = () => {
-		if (lang === 'plotly') return true;
-		if ((lang === 'json' || lang === '') && isPlotlyData(code)) return true;
-		return false;
+	const isVegaBlock = () => ['vega', 'vega-lite'].includes(baseLang());
+
+	// Deprecated renderer, kept so charts already in chat history keep displaying. Only an
+	// explicit ```plotly fence qualifies: the old content-sniffing also claimed ```json and bare
+	// blocks, so any JSON payload with a `data` array was turned into a chart iframe.
+	const isPlotlyBlock = () => baseLang() === 'plotly';
+
+	const isChartBlock = () => isMermaidBlock() || isVegaBlock() || isPlotlyBlock();
+
+	// Charts only render once the fence has closed — a half-streamed spec is not parseable.
+	// Both fence characters count: ~~~ is valid markdown and previously never satisfied this.
+	const isComplete = () => {
+		const raw = (token?.raw ?? '').trimEnd();
+		return raw.endsWith('```') || raw.endsWith('~~~');
 	};
 
-	const render = async () => {
-		onUpdate(token, id);
-		if (isMermaidBlock() && (token?.raw ?? '').slice(-4).includes('```')) {
+	const readDarkMode = () =>
+		typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+
+	let isDark = readDarkMode();
+	let themeObserver = null;
+
+	// A chat can hold dozens of charts; rendering the offscreen ones costs a Vega dataflow
+	// evaluation and a full SVG serialisation each. Hold off until the block is near the viewport.
+	let chartContainer = null;
+	let chartVisible = typeof IntersectionObserver === 'undefined';
+	let visibilityObserver = null;
+	let visibilityFallbackTimer = null;
+
+	const renderChart = async (dark = isDark) => {
+		if (!isChartBlock()) {
+			// The {#each} rendering these blocks is keyed by index, so this component instance gets
+			// reused for a different token. Drop the previous token's chart or it shadows whatever
+			// lands in the slot next.
+			renderHTML = null;
+			plotlyHTML = null;
+			renderError = null;
+			return;
+		}
+
+		if (!isComplete() || !chartVisible) {
+			return;
+		}
+
+		renderError = null;
+
+		// Same reuse hazard across renderer types: plotlyHTML wins the template's branch order, so
+		// a stale iframe would hide a vega/mermaid block rendered into the same instance.
+		if (isPlotlyBlock()) {
+			renderHTML = null;
+		} else {
+			plotlyHTML = null;
+		}
+
+		if (isMermaidBlock()) {
 			try {
-				renderHTML = await renderMermaid(code);
+				renderHTML = await renderMermaid(code, dark);
 			} catch (error) {
 				console.error('Failed to render mermaid diagram:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
 				renderError = $i18n.t('Failed to render diagram') + `: ${errorMsg}`;
 				renderHTML = null;
 			}
-		} else if (
-			(lang === 'vega' || lang === 'vega-lite') &&
-			(token?.raw ?? '').slice(-4).includes('```')
-		) {
+		} else if (isVegaBlock()) {
 			try {
-				renderHTML = await renderVegaVisualization(code, lang);
+				renderHTML = await renderVegaVisualization(code, lang, dark);
 			} catch (error) {
 				console.error('Failed to render Vega visualization:', error);
 				const errorMsg = error instanceof Error ? error.message : String(error);
 				renderError = $i18n.t('Failed to render visualization') + `: ${errorMsg}`;
 				renderHTML = null;
 			}
-		} else if (isPlotlyBlock() && (token?.raw ?? '').slice(-4).includes('```')) {
+		} else if (isPlotlyBlock()) {
 			try {
 				plotlyHTML = renderPlotlyVisualization(code);
 			} catch (error) {
@@ -463,9 +514,21 @@
 		}
 	}
 
+	// Stays token-driven exactly as before: a theme flip or a chart scrolling into view must not
+	// re-notify the parent.
 	$: if (_token) {
-		render();
+		onUpdate(token, id);
 	}
+
+	// Listed dependencies are explicit so it is obvious what re-renders a chart: new content, an
+	// app theme flip, or the block scrolling into range.
+	const renderChartOn = (..._deps) => {
+		if (_token) {
+			renderChart(isDark);
+		}
+	};
+
+	$: renderChartOn(_token, isDark, chartVisible);
 
 	$: if (attributes) {
 		onAttributesUpdate();
@@ -488,6 +551,56 @@
 		if (token) {
 			onUpdate(token, id);
 		}
+
+		if (!isChartBlock()) {
+			return;
+		}
+
+		// Watch the class rather than the theme store: 'system' resolves against the OS at runtime,
+		// and the store is set before the class is applied, so the element is the authoritative
+		// source either way.
+		isDark = readDarkMode();
+		themeObserver = new MutationObserver(() => {
+			const next = readDarkMode();
+			if (next !== isDark) {
+				isDark = next;
+			}
+		});
+		themeObserver.observe(document.documentElement, {
+			attributes: true,
+			attributeFilter: ['class']
+		});
+
+		if (typeof IntersectionObserver !== 'undefined' && chartContainer) {
+			let observerReported = false;
+
+			visibilityObserver = new IntersectionObserver(
+				(entries) => {
+					// Any delivery — intersecting or not — proves the observer works here.
+					observerReported = true;
+					if (entries.some((entry) => entry.isIntersecting)) {
+						chartVisible = true;
+						// One-shot: charts stay rendered once seen, so unhook immediately.
+						visibilityObserver?.disconnect();
+						visibilityObserver = null;
+					}
+				},
+				{ rootMargin: '600px 0px' }
+			);
+			visibilityObserver.observe(chartContainer);
+
+			// A hidden, occluded or throttled tab never paints, so IntersectionObserver never
+			// delivers at all and the chart would sit on the placeholder indefinitely. A visible
+			// tab reports within a frame — including a truthful "not intersecting" for offscreen
+			// blocks, which must stay deferred — so only total silence triggers the eager fallback.
+			visibilityFallbackTimer = setTimeout(() => {
+				if (!observerReported) {
+					chartVisible = true;
+				}
+			}, 2000);
+		} else {
+			chartVisible = true;
+		}
 	});
 
 	onDestroy(() => {
@@ -495,10 +608,17 @@
 			localPyodideWorker.terminate();
 			localPyodideWorker = null;
 		}
+
+		themeObserver?.disconnect();
+		themeObserver = null;
+		visibilityObserver?.disconnect();
+		visibilityObserver = null;
+		clearTimeout(visibilityFallbackTimer);
+		visibilityFallbackTimer = null;
 	});
 </script>
 
-<div>
+<div bind:this={chartContainer}>
 	<div
 		class="relative {className} flex flex-col rounded-2xl border border-gray-100/30 dark:border-gray-850/30 my-0.5"
 		dir="ltr"
@@ -510,38 +630,64 @@
 					class="w-full rounded-2xl border-0"
 					style="height: 500px;"
 					sandbox="allow-scripts"
-					title="Plotly Chart"
+					title={$i18n.t('Chart')}
 				></iframe>
 			</div>
-		{:else if isPlotlyBlock() && !plotlyHTML}
-			<div class="p-3">
-				{#if renderError}
+		{:else if isPlotlyBlock()}
+			{#if renderError}
+				<div class="p-3">
 					<div
 						class="flex gap-2.5 border px-4 py-3 border-red-600/10 bg-red-600/10 rounded-2xl mb-2"
 					>
 						{renderError}
 					</div>
-				{/if}
-				<pre>{code}</pre>
-			</div>
-		{:else if isMermaidBlock() || ['vega', 'vega-lite'].includes(lang)}
+					<details>
+						<summary class="text-xs text-gray-500 cursor-pointer select-none">
+							{$i18n.t('Show chart source')}
+						</summary>
+						<pre class="mt-2 text-xs overflow-x-auto">{code}</pre>
+					</details>
+				</div>
+			{:else if isComplete()}
+				<div class="p-3">
+					<div class="animate-pulse flex flex-col gap-2" aria-hidden="true">
+						<div class="h-3 w-24 rounded bg-gray-100 dark:bg-gray-850"></div>
+						<div class="h-40 rounded-xl bg-gray-50 dark:bg-gray-850/60"></div>
+					</div>
+				</div>
+			{:else}
+				<div class="p-3"><pre>{code}</pre></div>
+			{/if}
+		{:else if isMermaidBlock() || isVegaBlock()}
 			{#if renderHTML}
 				<SvgPanZoom
 					className=" rounded-2xl max-h-fit overflow-hidden"
 					svg={renderHTML}
 					content={_token.text}
 				/>
-			{:else}
+			{:else if isComplete() && !renderError}
 				<div class="p-3">
-					{#if renderError}
-						<div
-							class="flex gap-2.5 border px-4 py-3 border-red-600/10 bg-red-600/10 rounded-2xl mb-2"
-						>
-							{renderError}
-						</div>
-					{/if}
-					<pre>{code}</pre>
+					<div class="animate-pulse flex flex-col gap-2" aria-hidden="true">
+						<div class="h-3 w-24 rounded bg-gray-100 dark:bg-gray-850"></div>
+						<div class="h-40 rounded-xl bg-gray-50 dark:bg-gray-850/60"></div>
+					</div>
 				</div>
+			{:else if renderError}
+				<div class="p-3">
+					<div
+						class="flex gap-2.5 border px-4 py-3 border-red-600/10 bg-red-600/10 rounded-2xl mb-2"
+					>
+						{renderError}
+					</div>
+					<details>
+						<summary class="text-xs text-gray-500 cursor-pointer select-none">
+							{$i18n.t('Show chart source')}
+						</summary>
+						<pre class="mt-2 text-xs overflow-x-auto">{code}</pre>
+					</details>
+				</div>
+			{:else}
+				<div class="p-3"><pre>{code}</pre></div>
 			{/if}
 		{:else}
 			<div

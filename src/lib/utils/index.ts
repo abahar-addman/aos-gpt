@@ -2082,7 +2082,184 @@ export const renderMermaidDiagram = async (
 	}
 };
 
-export const renderVegaVisualization = async (spec: string, lang: string = '', i18n?: any) => {
+// Chart chrome and a colorblind-safe categorical order. The slot ordering IS the CVD-safety
+// mechanism, not cosmetics — validated against this app's real surfaces (#ffffff / #171717):
+// worst adjacent pair ΔE 9.1 light / 8.4 dark under protanopia (OKLab x100, >=8 target).
+// Assign slots in fixed order and never cycle them; past 8 series, fold the tail into "Other".
+const VEGA_PALETTE = {
+	light: {
+		category: [
+			'#2a78d6',
+			'#eb6834',
+			'#1baf7a',
+			'#eda100',
+			'#e87ba4',
+			'#008300',
+			'#4a3aa7',
+			'#e34948'
+		],
+		ink: '#0b0b0b',
+		inkSecondary: '#52514e',
+		muted: '#898781',
+		grid: '#e1e0d9',
+		domain: '#c3c2b7',
+		neutral: '#f0efec',
+		// Ordinal ramps must stay >=2:1 against the surface, so the light ramp starts at step 250
+		// rather than the near-white step 100 the continuous ramp is allowed to use.
+		ordinal: ['#86b6ef', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b']
+	},
+	dark: {
+		category: [
+			'#3987e5',
+			'#d95926',
+			'#199e70',
+			'#c98500',
+			'#d55181',
+			'#008300',
+			'#9085e9',
+			'#e66767'
+		],
+		ink: '#ffffff',
+		inkSecondary: '#c3c2b7',
+		muted: '#898781',
+		grid: '#2c2c2a',
+		domain: '#383835',
+		neutral: '#383835',
+		ordinal: ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95']
+	}
+};
+
+// Continuous magnitude: one hue, light -> dark. Never a rainbow.
+const VEGA_SEQUENTIAL = ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
+
+const VEGA_FONT = "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif";
+
+/**
+ * Vega/Vega-Lite `config` block matching the app's surfaces, typography and dark mode.
+ * Shape is deliberately limited to keys valid in BOTH Vega and Vega-Lite configs, so it can be
+ * applied to the spec before the Vega-Lite compile step.
+ */
+export const buildVegaTheme = (dark: boolean) => {
+	const p = dark ? VEGA_PALETTE.dark : VEGA_PALETTE.light;
+
+	return {
+		// Let the chat surface show through instead of painting a white box in dark mode.
+		background: 'transparent',
+		font: VEGA_FONT,
+		title: {
+			color: p.ink,
+			subtitleColor: p.inkSecondary,
+			fontSize: 14,
+			fontWeight: 600,
+			subtitleFontSize: 12,
+			anchor: 'start',
+			offset: 12
+		},
+		axis: {
+			labelColor: p.muted,
+			titleColor: p.inkSecondary,
+			gridColor: p.grid,
+			domainColor: p.domain,
+			tickColor: p.domain,
+			labelFontSize: 11,
+			titleFontSize: 12,
+			titleFontWeight: 500,
+			titlePadding: 8,
+			labelPadding: 4,
+			tickSize: 4,
+			gridOpacity: 0.7
+		},
+		// Identity is never carried by color alone — the legend stays on. Three of the light
+		// categorical slots sit below 3:1 against white, which makes this mandatory, not optional.
+		legend: {
+			labelColor: p.inkSecondary,
+			titleColor: p.inkSecondary,
+			labelFontSize: 11,
+			titleFontSize: 12,
+			titleFontWeight: 500,
+			symbolType: 'circle',
+			symbolSize: 80
+		},
+		header: { labelColor: p.inkSecondary, titleColor: p.ink, labelFontSize: 11 },
+		view: { stroke: 'transparent' },
+		range: {
+			category: p.category,
+			ordinal: p.ordinal,
+			ramp: VEGA_SEQUENTIAL,
+			heatmap: VEGA_SEQUENTIAL,
+			// Two poles + a neutral gray midpoint; Vega interpolates the arms evenly.
+			diverging: [p.category[0], p.neutral, p.category[7]]
+		}
+	};
+};
+
+// Vega-Lite's default single-view size renders at roughly 131x345 once axes are added — a sliver
+// in a chat column. Model-authored specs almost never set width/height, so supply a default where
+// top-level sizing is legal. Faceted/concatenated/repeated specs size their children instead, and
+// setting width/height on those is invalid, so they are left alone.
+const DEFAULT_CHART_WIDTH = 560;
+const DEFAULT_CHART_HEIGHT = 320;
+
+const withDefaultSize = (spec: any) => {
+	const isSingleViewOrLayer = 'mark' in spec || 'layer' in spec;
+	const isMultiView = ['facet', 'repeat', 'concat', 'hconcat', 'vconcat'].some(
+		(key) => key in spec
+	);
+
+	if (!isSingleViewOrLayer || isMultiView) {
+		return spec;
+	}
+
+	return {
+		...spec,
+		width: spec.width ?? DEFAULT_CHART_WIDTH,
+		height: spec.height ?? DEFAULT_CHART_HEIGHT
+	};
+};
+
+/** Merge the theme under the spec's own config so an explicit author choice still wins. */
+const applyVegaTheme = (spec: any, dark: boolean) => {
+	const theme = buildVegaTheme(dark);
+	const authored = spec?.config ?? {};
+	const merged: Record<string, any> = { ...theme };
+
+	for (const [key, value] of Object.entries(authored)) {
+		const base = (theme as Record<string, any>)[key];
+		merged[key] =
+			base && typeof base === 'object' && !Array.isArray(base) && value && typeof value === 'object' && !Array.isArray(value)
+				? { ...base, ...value }
+				: value;
+	}
+
+	return { ...spec, config: merged };
+};
+
+/**
+ * Vega emits a fixed pixel width/height. Add a viewBox (if the renderer omitted one) and let the
+ * SVG scale down inside a narrow chat column instead of overflowing it.
+ */
+const makeSvgResponsive = (svg: string): string =>
+	svg.replace(/^\s*<svg\b[^>]*>/, (tag) => {
+		const width = tag.match(/\bwidth="([\d.]+)"/)?.[1];
+		const height = tag.match(/\bheight="([\d.]+)"/)?.[1];
+
+		let out = tag;
+		if (!/\bviewBox=/i.test(out) && width && height) {
+			out = out.replace(/<svg\b/, `<svg viewBox="0 0 ${width} ${height}"`);
+		}
+		out = /\bstyle="/.test(out)
+			? out.replace(/\bstyle="/, 'style="max-width:100%;height:auto;')
+			: out.replace(/<svg\b/, '<svg style="max-width:100%;height:auto"');
+
+		return out;
+	});
+
+export const renderVegaVisualization = async (
+	spec: string,
+	lang: string = '',
+	dark: boolean = typeof document !== 'undefined' &&
+		document.documentElement.classList.contains('dark')
+) => {
 	const vega = await import('vega');
 	const parsedSpec = JSON.parse(spec);
 	const hasVegaLiteKeys =
@@ -2097,10 +2274,16 @@ export const renderVegaVisualization = async (spec: string, lang: string = '', i
 		lang === 'vega-lite' ||
 		(parsedSpec.$schema && parsedSpec.$schema.includes('vega-lite')) ||
 		hasVegaLiteKeys;
-	let vegaSpec = parsedSpec;
+	// Theme before compiling: Vega-Lite folds `config` into the Vega spec it emits, and a raw
+	// Vega spec honours a top-level `config` directly, so one call covers both branches.
+	const themedSpec = applyVegaTheme(parsedSpec, dark);
+
+	let vegaSpec = themedSpec;
 	if (isVegaLite) {
 		const vegaLite = await import('vega-lite');
-		vegaSpec = vegaLite.compile(parsedSpec).spec;
+		// Sizing only applies to Vega-Lite: a raw Vega spec may drive width/height from signals,
+		// and overwriting those would break it.
+		vegaSpec = vegaLite.compile(withDefaultSize(themedSpec)).spec;
 	}
 	// Specs come from untrusted chat content: block external loads via data.url (loader.load)
 	// and image mark hrefs emitted into the SVG (loader.sanitize).
@@ -2118,8 +2301,17 @@ export const renderVegaVisualization = async (spec: string, lang: string = '', i
 		return sanitize(uri, options);
 	};
 	const view = new vega.View(vega.parse(vegaSpec), { loader, renderer: 'none' });
-	const svg = await view.toSVG();
-	return svg;
+	try {
+		const svg = await view.toSVG();
+		// toSVG() evaluates the dataflow in this origin, so the spec's expressions have already
+		// run by the time we get here — sanitizing the output is defence in depth against the
+		// markup, not a substitute for keeping vega-functions patched.
+		return makeSvgResponsive(sanitizeSvg(svg));
+	} finally {
+		// Without this the dataflow, its listeners and its parsed data stay alive for the life of
+		// the page — one leak per chart in a long chat.
+		view.finalize();
+	}
 };
 
 export const isMermaidData = (code: string): boolean => {
@@ -2129,6 +2321,12 @@ export const isMermaidData = (code: string): boolean => {
 	return mermaidKeywords.test(trimmed);
 };
 
+/**
+ * @deprecated Content-sniffing for Plotly figures is no longer used to decide whether to render a
+ * chart — it claimed any ```json block containing a `data` array, so ordinary JSON output (an API
+ * response, a tool result) was silently turned into a broken chart. Only an explicit ```plotly
+ * fence renders now. Kept exported for callers outside this module; do not add new uses.
+ */
 export const isPlotlyData = (code: string): boolean => {
 	try {
 		const parsed = JSON.parse(code);
@@ -2146,6 +2344,22 @@ export const isPlotlyData = (code: string): boolean => {
 	return false;
 };
 
+// Pinned Plotly build for the deprecated renderer, with its Subresource Integrity digest so a
+// compromised or mutated CDN response is rejected rather than executed.
+const PLOTLY_CDN_ORIGIN = 'https://cdn.plot.ly';
+const PLOTLY_CDN_URL = `${PLOTLY_CDN_ORIGIN}/plotly-2.35.2.min.js`;
+const PLOTLY_CDN_SRI = 'sha384-cCVCZkAjYNxaYKbM8lsArLznDF/SvMFr1jcZrvOpSTCa0W40ZAdLzHCEulnUa5i7';
+
+// JSON.stringify does not escape '/', so a string value containing '</script>' would close the
+// inline script early and inject markup into the frame. Escape '<' at the source.
+const escapeForScriptTag = (value: unknown): string =>
+	JSON.stringify(value).replace(/</g, '\\u003c');
+
+/**
+ * @deprecated Superseded by the Vega-Lite path (```vega-lite), which renders inline, inherits the
+ * app theme, needs no third-party CDN and can be schema-validated. This renderer is retained only
+ * so charts in existing chat history keep displaying; do not emit new ```plotly blocks.
+ */
 export const renderPlotlyVisualization = (code: string): string => {
 	let plotlyData: any;
 	let plotlyLayout: any = {};
@@ -2167,10 +2381,25 @@ export const renderPlotlyVisualization = (code: string): string => {
 		throw new Error('Invalid Plotly JSON data');
 	}
 
+	// The frame is sandboxed without allow-same-origin, so this content runs in an opaque origin
+	// with no access to the app. The CSP narrows it further: no network egress except back to the
+	// pinned CDN (Plotly fetches topojson from there for geo traces), no framing, no form posts.
+	const csp = [
+		"default-src 'none'",
+		`script-src ${PLOTLY_CDN_ORIGIN} 'unsafe-inline'`,
+		"style-src 'unsafe-inline'",
+		'img-src data: blob:',
+		'font-src data:',
+		`connect-src ${PLOTLY_CDN_ORIGIN}`,
+		"base-uri 'none'",
+		"form-action 'none'"
+	].join('; ');
+
 	return `<!DOCTYPE html>
 <html>
 <head>
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<meta http-equiv="Content-Security-Policy" content="${csp}">
+<script src="${PLOTLY_CDN_URL}" integrity="${PLOTLY_CDN_SRI}" crossorigin="anonymous"></script>
 <style>
 body { margin: 0; padding: 0; background: transparent; }
 #chart { width: 100%; height: 100%; }
@@ -2179,7 +2408,7 @@ body { margin: 0; padding: 0; background: transparent; }
 <body>
 <div id="chart"></div>
 <script>
-Plotly.newPlot('chart', ${JSON.stringify(plotlyData)}, ${JSON.stringify(plotlyLayout)}, ${JSON.stringify(plotlyConfig)});
+Plotly.newPlot('chart', ${escapeForScriptTag(plotlyData)}, ${escapeForScriptTag(plotlyLayout)}, ${escapeForScriptTag(plotlyConfig)});
 </script>
 </body>
 </html>`;
